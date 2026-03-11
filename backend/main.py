@@ -3,13 +3,24 @@ FastAPI Backend for Ethical Persuasion Chatbot
 Main application entry point
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 import os
 from dotenv import load_dotenv
 
+# Import database and models
+from database import engine, Base, get_db
+import models
+
+# Import routers
+from routers import conversations, chat
+
 # Load environment variables
 load_dotenv()
+
+# Create database tables
+Base.metadata.create_all(bind=engine)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -29,6 +40,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include routers
+app.include_router(conversations.router)
+app.include_router(chat.router)
+
 
 @app.get("/")
 async def root():
@@ -41,21 +56,19 @@ async def root():
 
 
 @app.get("/health")
-async def health_check():
+async def health_check(db: Session = Depends(get_db)):
     """Health check endpoint for monitoring"""
+    try:
+        # Test database connection
+        db.execute("SELECT 1")
+        db_status = "connected"
+    except Exception as e:
+        db_status = f"error: {str(e)}"
+
     return {
-        "status": "healthy",
-        "database": "connected",  # TODO: Add actual DB health check
+        "status": "healthy" if db_status == "connected" else "degraded",
+        "database": db_status,
         "environment": os.getenv("ENVIRONMENT", "development")
-    }
-
-
-@app.get("/api/v1/chat")
-async def chat_endpoint():
-    """Placeholder chat endpoint"""
-    return {
-        "message": "Chat endpoint - Coming soon",
-        "status": "not_implemented"
     }
 
 
