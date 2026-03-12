@@ -1,11 +1,11 @@
 """
 LLM Generator - Step 4 of the pipeline.
 
-Builds a structured system prompt from the strategy YAML and calls GPT-4o-mini
+Builds a structured system prompt from the strategy YAML and calls Gemini 2.5 Flash
 to produce a compliant response. The LLM executes strategy—it does NOT make
 ethical decisions (those are made by the ethics gate and strategy selector).
 
-Model: gpt-4o-mini
+Model: gemini-2.5-flash
   - Fast and cost-effective for high-volume chat
   - Excellent instruction-following for constrained generation
   - Temperature 0.7: natural-sounding but controlled output
@@ -19,23 +19,23 @@ Research basis:
 import os
 from typing import Optional
 
-from openai import OpenAI
+_GEMINI_MODEL = "gemini-2.5-flash"
+_configured = False
 
-_client: Optional[OpenAI] = None
 
-
-def _get_client() -> OpenAI:
-    """Get or create the OpenAI client lazily."""
-    global _client
-    if _client is None:
-        api_key = os.getenv("OPENAI_API_KEY")
+def _ensure_configured() -> None:
+    """Configure the Gemini client lazily on first use."""
+    global _configured
+    if not _configured:
+        import google.generativeai as genai  # type: ignore[import]
+        api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError(
-                "OPENAI_API_KEY environment variable is not set. "
+                "GOOGLE_API_KEY environment variable is not set. "
                 "Add it to your .env file."
             )
-        _client = OpenAI(api_key=api_key)
-    return _client
+        genai.configure(api_key=api_key)
+        _configured = True
 
 
 def _fmt_list(items) -> str:
@@ -47,7 +47,7 @@ def _fmt_list(items) -> str:
 
 def build_system_prompt(strategy: dict, classification: Optional[dict]) -> str:
     """
-    Build the system prompt for GPT-4o-mini from strategy YAML + classification context.
+    Build the system prompt for Gemini from strategy YAML + classification context.
 
     The prompt:
       1. Sets role and TCS context
@@ -63,7 +63,6 @@ def build_system_prompt(strategy: dict, classification: Optional[dict]) -> str:
     Returns:
         Formatted system prompt string
     """
-    # User context section (only present for APPROVED path with full classification)
     context_section = ""
     if classification:
         emotion = classification.get("emotion", "unknown")
@@ -110,7 +109,7 @@ def generate(
     max_tokens: int = 300,
 ) -> str:
     """
-    Generate a compliant response using GPT-4o-mini.
+    Generate a compliant response using Gemini 2.5 Flash.
 
     Args:
         message: Original user message
@@ -123,20 +122,23 @@ def generate(
         Generated response text (stripped)
 
     Raises:
-        ValueError: If OPENAI_API_KEY is not set
-        openai.OpenAIError: On API failures
+        ValueError: If GOOGLE_API_KEY is not set
     """
-    client = _get_client()
+    import google.generativeai as genai  # type: ignore[import]
+    _ensure_configured()
     system_prompt = build_system_prompt(strategy_config, classification)
 
-    completion = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": message},
-        ],
-        temperature=temperature,
-        max_tokens=max_tokens,
+    model = genai.GenerativeModel(
+        model_name=_GEMINI_MODEL,
+        system_instruction=system_prompt,
     )
 
-    return completion.choices[0].message.content.strip()
+    response = model.generate_content(
+        message,
+        generation_config=genai.GenerationConfig(
+            temperature=temperature,
+            max_output_tokens=max_tokens,
+        ),
+    )
+
+    return response.text.strip()
