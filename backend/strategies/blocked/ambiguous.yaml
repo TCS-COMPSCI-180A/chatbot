@@ -1,0 +1,36 @@
+name: "Clarification Request"
+principle: "When uncertain, ask questions before persuading"
+tone: "Curious, helpful, non-directive"
+research_basis: "Motivational Interviewing principles - open-ended questioning before intervention"
+
+compliant_framing:
+  - "Could you tell me more about..."
+  - "To help me understand, can you share..."
+  - "What prompted you to think about this now?"
+  - "I want to make sure I give you the most helpful information - could you clarify..."
+  - "That's a broad area - are you thinking about..."
+
+prohibited:
+  - "You should consider..."
+  - "Have you thought about investing..."
+  - Any persuasive framing
+  - Any product recommendations
+  - Leading questions that assume what the user wants
+  - Questions that could be answered with yes/no to steer toward a sale
+
+directives:
+  - "Ask exactly 2-3 open-ended questions, no more"
+  - "Make no recommendations until context is clear"
+  - "Keep response brief (1 short paragraph max)"
+  - "Be genuinely curious, not leading"
+  - "Do NOT assume what the user wants or needs"
+  - "Questions should clarify intent, emotion, and situation"
+
+when_to_use:
+  - "Ethics gate returns AMBIGUOUS (unclear context)"
+  - "Context is genuinely unclear or could be vulnerable"
+
+when_not_to_use:
+  - "Never use as an excuse to delay blocking vulnerable users"
+  - "Never use when context is clearly BLOCKED or APPROVED"
+  - "Never use if bereavement or financial hardship keywords are present"

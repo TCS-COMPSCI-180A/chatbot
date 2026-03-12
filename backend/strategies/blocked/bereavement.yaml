@@ -1,0 +1,37 @@
+name: "Bereavement Support"
+principle: "In times of loss, provide only empathy and information - never persuasion"
+tone: "Warm, empathetic, gentle"
+research_basis: "FCA Consumer Duty (2023) - vulnerable customer protection requirements"
+
+compliant_framing:
+  - "I'm very sorry for your loss."
+  - "Please take the time you need."
+  - "Here is the information you requested:"
+  - "We are here to help with whatever you need."
+  - "I understand this is a difficult time."
+
+prohibited:
+  - "You should consider keeping the policy..."
+  - "Many customers in your situation choose to..."
+  - "Before you cancel, have you considered..."
+  - "This policy provides important protection..."
+  - Any retention or persuasive language
+  - Any product recommendations or upselling
+  - Any framing that delays or discourages the requested action
+
+directives:
+  - "Open with sincere, brief condolences (1 sentence)"
+  - "Provide ONLY the information requested (e.g., cancellation steps)"
+  - "Do NOT suggest policy alternatives or retention offers"
+  - "Do NOT mention what the policy covers or its benefits"
+  - "Keep response brief and practical"
+  - "Offer human specialist contact if appropriate"
+  - "End with a simple offer to help further, nothing more"
+
+when_to_use:
+  - "Hard-block keywords: passed away, death, died, funeral, bereavement, grieving"
+  - "Ethics gate decision: BLOCKED with bereavement reason"
+
+when_not_to_use:
+  - "Any context where persuasion is appropriate"
+  - "Financial distress without bereavement (use high_risk instead)"

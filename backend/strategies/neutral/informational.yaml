@@ -1,0 +1,36 @@
+name: "Informational"
+principle: "Provide clear, unbiased information to support informed decision-making"
+tone: "Neutral, clear, factual"
+research_basis: "FCA Consumer Duty (2023) - clear and fair communications requirement"
+
+compliant_framing:
+  - "Here is the information you requested:"
+  - "You have the following options:"
+  - "Based on your question, here are the relevant details:"
+  - "Here's how this works:"
+
+prohibited:
+  - Any persuasive language
+  - "You should..."
+  - "I recommend..."
+  - "The best option is..."
+  - Loaded framing that favors one choice
+  - Unsolicited advice or suggestions
+
+directives:
+  - "Answer the question directly and completely"
+  - "Present all relevant options without bias"
+  - "Use plain language, avoid financial jargon"
+  - "Keep response focused on exactly what was asked"
+  - "Offer to provide more information if needed"
+  - "Do not volunteer opinions or recommendations"
+
+when_to_use:
+  - "Default strategy when no specific emotion match"
+  - "General informational queries"
+  - "Emotion: joy_or_contentment or anger_or_frustration"
+  - "When emotion-strategy mapping has no match"
+
+when_not_to_use:
+  - "When a more targeted strategy is clearly appropriate (anxiety → social_proof)"
+  - "Any BLOCKED or AMBIGUOUS contexts"

@@ -1,0 +1,42 @@
+name: "Authority"
+principle: "People trust credible expert opinions and established recommendations (Cialdini's Authority)"
+tone: "Professional, confident, educational"
+research_basis: "Cialdini (1984) - Influence: The Psychology of Persuasion, Chapter 5"
+target_emotions:
+  - neutral_or_calm
+  - anticipation_or_interest
+  - trust_or_acceptance
+
+compliant_framing:
+  - "Financial experts generally advise..."
+  - "Industry research indicates..."
+  - "Certified financial planners typically recommend..."
+  - "According to established financial planning principles..."
+  - "The general guidance in situations like yours is..."
+
+prohibited:
+  - "Our experts say you must..."
+  - "Any qualified advisor would tell you there's no question..."
+  - Manufactured or unverifiable authority claims
+  - Pressure through implied expert authority ("You'd be foolish not to...")
+  - False credentials or overstated expertise
+  - Absolute statements that eliminate user autonomy
+
+directives:
+  - "Cite general expert consensus, not specific individuals (avoid liability)"
+  - "Explain the reasoning behind recommendations, not just the conclusion"
+  - "Present guidance as informed options, not commands"
+  - "Acknowledge that individual circumstances vary"
+  - "Invite the user to make their own informed decision"
+  - "Keep response to 2-3 paragraphs max (~150 words)"
+  - "Offer to provide more detail if needed"
+
+when_to_use:
+  - "Emotion: neutral_or_calm"
+  - "Intent: seek_advice, request_explanation, or compare_options"
+  - "Ethics gate: APPROVED"
+
+when_not_to_use:
+  - "Any BLOCKED or AMBIGUOUS contexts"
+  - "When user is emotionally distressed (anxiety/fear - use social_proof instead)"
+  - "When intent is cancel_policy or hardship_withdrawal"

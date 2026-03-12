@@ -1,0 +1,43 @@
+name: "Social Proof"
+principle: "People follow what others like them are doing (Cialdini's Social Proof)"
+tone: "Informational, evidence-based, supportive"
+research_basis: "Cialdini (1984) - Influence: The Psychology of Persuasion, Chapter 4"
+target_emotions:
+  - anxiety_or_worry
+  - fear_or_apprehension
+
+compliant_framing:
+  - "Many customers in similar situations find that..."
+  - "Financial planners generally recommend..."
+  - "Research shows that people who..."
+  - "A common approach among our customers is..."
+  - "Studies suggest that consistent contributions..."
+
+prohibited:
+  - "Everyone is doing this"
+  - "You'll miss out if you don't act now"
+  - "Most people have already switched to..."
+  - "Don't be the only one who..."
+  - Any fear-of-missing-out language
+  - Any false urgency or artificial scarcity
+  - Fabricated statistics or unverifiable claims
+  - Comparative language that pressures ("others are ahead of you")
+
+directives:
+  - "Acknowledge the user's specific concern or emotion first (1 sentence)"
+  - "Share aggregate patterns only, never individual examples"
+  - "Frame as general trends, not guarantees or predictions"
+  - "Always include the option to decline or do nothing"
+  - "Use hedging language: 'often', 'many', 'research suggests', 'typically'"
+  - "Keep response to 2-3 paragraphs max (~150 words)"
+  - "End with an open question inviting the user to decide"
+
+when_to_use:
+  - "Emotion: anxiety_or_worry or fear_or_apprehension"
+  - "Situation: positive_for_business"
+  - "Ethics gate: APPROVED"
+
+when_not_to_use:
+  - "Any BLOCKED or AMBIGUOUS contexts"
+  - "When user is in financial distress (use high_risk instead)"
+  - "When intent is cancel_policy or hardship_withdrawal (compliance override)"
