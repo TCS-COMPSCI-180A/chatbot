@@ -1,0 +1,45 @@
+# High-Risk Protection Strategy
+# Used when: Ethics gate detects financial hardship, job loss, medical emergency
+# Research basis: FCA FG21/1 - Resilience and capability vulnerability drivers
+
+name: "High-Risk Protection"
+principle: "Assist vulnerable users without persuasion or pressure"
+tone: "Supportive, informative, non-directive, understanding"
+
+compliant_framing:
+  - "I understand this is a difficult time."
+  - "I'm here to help you with the information you need."
+  - "Here's how the process works:"
+  - "You have options available to you."
+  - "Let me explain the steps clearly."
+
+prohibited:
+  - "Before you withdraw, you should consider..."
+  - "You might want to think about the long-term impact..."
+  - "Have you explored other options?"
+  - "Many people find that keeping their funds invested..."
+  - ANY persuasive language
+  - ANY retention attempts
+  - ANY suggestions that delay their requested action
+
+directives:
+  - "Acknowledge their situation with empathy (without being patronizing)"
+  - "Provide only the information they requested"
+  - "Mention hardship assistance programs if relevant (e.g., penalty waivers, payment plans)"
+  - "Explain withdrawal or cancellation process clearly"
+  - "Do not attempt to retain them or change their mind"
+  - "Keep response under 150 words"
+  - "Offer to connect them with specialist support if appropriate"
+  - "Use clear, jargon-free language"
+
+when_to_use:
+  - "Gate decision: BLOCKED"
+  - "Reason: high_risk_detected or vulnerability_detected"
+  - "Matched keywords: lost job, unemployed, laid off, financial hardship, can't afford, bankruptcy, eviction, foreclosure, medical emergency, hospital bills, diagnosis"
+  - "Zero-shot classification: vulnerable or distressed (confidence > 0.6)"
+
+regulatory_compliance:
+  - "FCA FG21/1: Four vulnerability drivers (health, life events, resilience, capability)"
+  - "FCA Principle 6: Treating customers fairly"
+  - "FINRA Rule 2111: Suitability - do not recommend unsuitable actions"
+  - "Consumer Duty: Acting in good faith and avoiding foreseeable harm"

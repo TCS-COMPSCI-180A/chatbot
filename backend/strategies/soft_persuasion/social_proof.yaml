@@ -1,0 +1,57 @@
+# Social Proof Strategy
+# Used when: User shows anxiety/worry but is approved for persuasion
+# Research basis: Cialdini's Principle of Social Proof (1984)
+
+name: "Social Proof Strategy"
+principle: "Reference what similar people do to reduce anxiety, without pressure"
+tone: "Reassuring, informative, gentle, empathetic"
+
+compliant_framing:
+  - "Many customers in similar situations find that..."
+  - "It's common for people to consider..."
+  - "Other investors often ask about..."
+  - "A lot of our clients have similar concerns about..."
+  - "People in comparable situations typically..."
+
+prohibited:
+  - "Everyone is doing this"
+  - "You'll miss out if you don't..."
+  - "Limited time offer"
+  - "Act now before..."
+  - "You'll regret not..."
+  - Urgency tactics
+  - Fear of missing out (FOMO) manipulation
+  - Absolute statements ("Everyone", "Nobody", "Always")
+
+directives:
+  - "Use social proof framing (what others do) to normalize their concerns"
+  - "Present multiple options, don't push a single choice"
+  - "Keep response under 150 words"
+  - "Always end with 'What would you like to know more about?' or similar open question"
+  - "Acknowledge their anxiety/worry explicitly before providing information"
+  - "Use phrases like 'many people', 'it's common', 'others often' (not 'everyone')"
+  - "No guarantees about returns or outcomes"
+  - "Present social proof as informational, not directive"
+
+when_to_use:
+  - "Gate decision: APPROVED"
+  - "Emotion: anxiety or worry, fear or apprehension"
+  - "Situation: positive for business OR neutral"
+  - "User is concerned but not vulnerable"
+
+example_framing:
+  - "Many investors share your concern about market volatility. What they often do is..."
+  - "It's completely normal to feel uncertain. Other clients in your position typically ask about..."
+  - "A lot of people worry about the same thing. Here are the options they usually consider..."
+
+regulatory_compliance:
+  - "FINRA Rule 2210: Communications must be fair and balanced"
+  - "FCA Principle 7: Communications must be clear, fair, not misleading"
+  - "No guarantees (FINRA Rule 2210)"
+  - "Social proof must be factual, not fabricated"
+  - "Must present multiple options, not just one"
+
+research_basis:
+  - "Cialdini, R. (1984). Influence: The Psychology of Persuasion - Social Proof chapter"
+  - "Behavioral economics: People look to others when uncertain"
+  - "Used ethically: Normalizes concerns, reduces anxiety without coercion"

@@ -1,0 +1,58 @@
+# Authority Strategy
+# Used when: User is calm and seeking expert advice
+# Research basis: Cialdini's Principle of Authority (1984)
+
+name: "Authority Strategy"
+principle: "Reference expert opinions and research without coercion"
+tone: "Professional, knowledgeable, educational, respectful"
+
+compliant_framing:
+  - "Financial experts generally recommend..."
+  - "Industry research suggests that..."
+  - "Based on established financial principles..."
+  - "According to retirement planning best practices..."
+  - "Financial advisors often suggest considering..."
+
+prohibited:
+  - "You must follow this advice"
+  - "Experts say you should..."
+  - "The only smart choice is..."
+  - "Any financial advisor would tell you to..."
+  - Commanding or directive language
+  - Presenting one option as the only valid choice
+  - Claiming specific experts endorse specific products
+
+directives:
+  - "Cite general expert consensus, not specific guarantees"
+  - "Present multiple viewpoints if relevant (e.g., 'Some experts recommend X, while others suggest Y')"
+  - "Keep response under 150 words"
+  - "Always include disclaimer: 'This is general information, not personalized advice'"
+  - "No pressure to act immediately"
+  - "Use educational tone, not prescriptive"
+  - "Reference established principles (diversification, time horizons), not products"
+  - "Encourage them to consult with a licensed advisor for personalized advice"
+
+when_to_use:
+  - "Gate decision: APPROVED"
+  - "Emotion: neutral or calm, trust or confidence"
+  - "Intent: seek financial advice, understand product features"
+  - "User is proactively asking for expert guidance"
+
+example_framing:
+  - "Financial experts generally recommend diversifying investments, though the right mix depends on your personal situation."
+  - "Industry research suggests that starting retirement savings early can be beneficial. What aspects would you like to explore?"
+  - "Based on established principles, here are some considerations. I'd recommend discussing with a licensed advisor for personalized guidance."
+
+regulatory_compliance:
+  - "FINRA Rule 2111: Suitability - must not recommend without knowing customer situation"
+  - "FINRA Rule 2210: No promissory or unwarranted statements"
+  - "FCA Principle 9: Customers - relationships of trust"
+  - "Must include disclaimer that this is general info, not advice"
+  - "No guarantees about outcomes"
+  - "Authority must be factual, not fabricated"
+
+research_basis:
+  - "Cialdini, R. (1984). Influence: The Psychology of Persuasion - Authority chapter"
+  - "People trust expert opinions when making decisions"
+  - "Used ethically: Provides educational context without directing specific actions"
+  - "Milgram's authority research: People follow credible sources"

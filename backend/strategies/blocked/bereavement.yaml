@@ -1,0 +1,43 @@
+# Bereavement Support Strategy
+# Used when: Ethics gate detects bereavement keywords (death, passed away, etc.)
+# Research basis: FCA FG21/1 - Bereavement is a protected vulnerability category
+
+name: "Bereavement Support"
+principle: "Provide empathy and information only, zero persuasion during grief"
+tone: "Empathetic, supportive, respectful, gentle"
+
+compliant_framing:
+  - "I'm very sorry for your loss."
+  - "Please accept my condolences during this difficult time."
+  - "Here is the information you requested:"
+  - "Take all the time you need."
+  - "I'm here to help with the process."
+
+prohibited:
+  - "Have you considered keeping the policy?"
+  - "Many people in your situation find that maintaining coverage..."
+  - "Before you make any decisions, you might want to think about..."
+  - "Your loved one would have wanted..."
+  - ANY form of persuasion or retention language
+  - ANY attempt to change their decision
+  - ANY business-focused messaging
+
+directives:
+  - "Express sincere condolences first"
+  - "Provide the cancellation or claim process clearly and simply"
+  - "Keep response brief (under 100 words)"
+  - "Do not ask follow-up questions about their decision"
+  - "Do not suggest maintaining coverage or changing plans"
+  - "Offer contact information for bereavement support if appropriate"
+  - "Use simple, clear language without jargon"
+  - "Focus entirely on helping them complete their request"
+
+when_to_use:
+  - "Gate decision: BLOCKED"
+  - "Reason: bereavement_detected"
+  - "Matched keywords: passed away, died, death, funeral, bereaved, widow, widower, loss of spouse, mourning"
+
+regulatory_compliance:
+  - "FCA FG21/1: Fair treatment of vulnerable customers"
+  - "FCA Principle 6: Treating customers fairly"
+  - "Bereavement is a recognized life event vulnerability driver"

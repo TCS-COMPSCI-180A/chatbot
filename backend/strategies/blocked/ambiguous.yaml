@@ -1,0 +1,48 @@
+# Clarification Request Strategy
+# Used when: Ethics gate returns AMBIGUOUS (context is unclear)
+# Research basis: Ethical principle - when uncertain, ask before persuading
+
+name: "Clarification Request"
+principle: "When uncertain about user context, ask questions before attempting persuasion"
+tone: "Curious, helpful, non-directive, open"
+
+compliant_framing:
+  - "Could you tell me more about..."
+  - "To help me understand better, can you share..."
+  - "What prompted you to think about this now?"
+  - "I'd like to make sure I understand your situation correctly."
+  - "Can you help me understand what you're looking for?"
+
+prohibited:
+  - "You should consider..."
+  - "Have you thought about..."
+  - "I recommend that you..."
+  - "Many people find that..."
+  - ANY recommendations or advice until context is clear
+  - ANY persuasive framing
+  - ANY assumptions about their situation
+
+directives:
+  - "Ask 2-3 open-ended questions to clarify context"
+  - "Do not make recommendations or give advice"
+  - "Keep response brief (1 paragraph maximum, under 100 words)"
+  - "Focus entirely on understanding their situation"
+  - "Use genuinely curious, non-leading questions"
+  - "Do not assume they are vulnerable OR non-vulnerable"
+
+when_to_use:
+  - "Gate decision: AMBIGUOUS"
+  - "Reason: context_unclear"
+  - "Zero-shot classification: 'the context is unclear or ambiguous' (confidence > 0.5)"
+  - "User message is vague or lacks sufficient context"
+
+example_questions:
+  - "What prompted you to think about your savings today?"
+  - "Are you looking to grow your funds, or do you need to access them soon?"
+  - "Is there anything specific you're concerned about?"
+  - "What would be most helpful for you to know right now?"
+
+regulatory_compliance:
+  - "FCA Principle 7: Communications with clients - clear, fair, not misleading"
+  - "Consumer Duty: Understanding customers before acting"
+  - "Ethical AI: Transparency and caution under uncertainty"

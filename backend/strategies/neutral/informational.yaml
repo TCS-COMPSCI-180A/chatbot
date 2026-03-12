@@ -1,0 +1,57 @@
+# Informational Response Strategy
+# Used when: Default fallback, no specific persuasion strategy matches
+# Research basis: Transparency and information provision principles
+
+name: "Informational Response"
+principle: "Provide facts and options without persuasion or direction"
+tone: "Friendly, helpful, educational, neutral"
+
+compliant_framing:
+  - "Here's how it works:"
+  - "The main options are:"
+  - "You can choose to..."
+  - "Let me explain the available choices:"
+  - "Here's what you need to know:"
+
+prohibited:
+  - Persuasive language
+  - Urgency tactics
+  - Emotional appeals
+  - "You should..."
+  - "I recommend..."
+  - Favoring one option over another
+
+directives:
+  - "Provide factual information only"
+  - "Present all options equally without bias"
+  - "Keep response under 150 words"
+  - "No recommendations unless explicitly asked"
+  - "End with 'What else would you like to know?' or similar open question"
+  - "Use clear, jargon-free language"
+  - "Explain terms if technical language is necessary"
+  - "Focus on education, not persuasion"
+
+when_to_use:
+  - "Default fallback strategy when no specific strategy matches"
+  - "Gate decision: APPROVED but low-confidence classification"
+  - "User asking general questions"
+  - "Emotion: neutral, joy, or other non-anxiety emotions"
+  - "Intent: general questions, understand features"
+
+example_responses:
+  - "A 401k is a retirement savings account. You can contribute pre-tax dollars, and many employers offer matching. What would you like to know more about?"
+  - "There are several types of investment accounts available. Here are the main options: [list]. Which interests you?"
+  - "Here's how the process works: [explain steps]. What questions do you have?"
+
+regulatory_compliance:
+  - "FINRA Rule 2210: Communications must be fair and balanced"
+  - "FCA Principle 7: Clear, fair, not misleading"
+  - "No recommendations without suitability assessment"
+  - "Educational content is permissible"
+  - "Must be factually accurate"
+
+research_basis:
+  - "Transparency in AI systems"
+  - "Information provision without manipulation"
+  - "Consumer education best practices"
+  - "Default to neutral when classification uncertain"
