@@ -1,33 +1,32 @@
 # Current Project Status
 
 **Last Updated**: 2026-03-11
-**Current Phase**: Implementation In Progress
-**Team**: 5 developers (tasks divided via GitHub Issues)
+**Current Phase**: AI Pipeline Complete — Frontend + Testing remain
+**Developer**: Rounak Rao
 
 ---
 
 ## Quick Status Summary
 
 ```
-[██████░░░░░░░░░] 40% Complete
+[████████░░░░░░░] 55% Complete
 
 ✅ Database & API Foundation (Complete)
 ✅ Planning & Architecture (Complete)
 ✅ Research & Label Frameworks (Complete)
+✅ AI Pipeline Implementation (Complete - all 6 pipeline files)
 ✅ Strategy YAML Files (Complete - 6 files)
-✅ Strategy Selector & Orchestrator (Complete - using mocks until team components ready)
-⬜ AI Pipeline Components (40% - In Progress by team)
 ⬜ Frontend Integration (Not Started)
 ⬜ Testing & Demo Prep (Not Started)
 ```
 
-**Reality Check**: Strategy files and orchestrator complete. Orchestrator uses mock responses for now - will automatically use real components once team finishes their work (ethics gate, classifier, generator, critic).
+**Reality Check**: Full AI pipeline is built and wired into chat.py. Needs OPENAI_API_KEY in .env.
 
 ---
 
 ## What's Actually Built ✅
 
-### Phase 0: Foundation (15% of total project)
+### Phase 0: Foundation Only (15% of total project)
 
 #### Database Layer
 - ✅ `backend/database.py` - SQLAlchemy connection, session management
@@ -50,58 +49,50 @@
 - ✅ `.claude/architecture.md`
 - ✅ `.claude/current_status.md` (this file)
 
-### Phase 1: Strategy System & Orchestrator (25% of total project) - NEW!
-
-#### Strategy YAML Files (6 files - research-backed)
-- ✅ `backend/strategies/blocked/bereavement.yaml` - Empathy for loss/grief (FCA FG21/1)
-- ✅ `backend/strategies/blocked/high_risk.yaml` - Support for financial hardship
-- ✅ `backend/strategies/blocked/ambiguous.yaml` - Clarification questions workflow
-- ✅ `backend/strategies/soft_persuasion/social_proof.yaml` - Cialdini social proof framing
-- ✅ `backend/strategies/soft_persuasion/authority.yaml` - Expert opinion references
-- ✅ `backend/strategies/neutral/informational.yaml` - Factual fallback (safe default)
-
-#### Pipeline Components (Orchestration)
-- ✅ `backend/pipeline/__init__.py` - Pipeline package initialization
-- ✅ `backend/pipeline/strategy.py` - Strategy selector + YAML loader (emotion-first logic, no compliance override)
-- ✅ `backend/pipeline/orchestrator.py` - Central coordinator (BLOCKED/AMBIGUOUS/APPROVED flows, uses mocks for team components)
-
-**What This Means**: Strategy files define ethical response patterns. Orchestrator coordinates pipeline flow. Currently uses mock components for ethics_gate, classifier, generator, critic (team is building these). Once team finishes, orchestrator will automatically use real implementations.
+**What This Means**: We can store conversations in a database, but there's NO AI yet. The chat endpoint is fake.
 
 ---
 
-## What's NOT Built Yet ❌ (60% of the project)
+## What's Built (AI Pipeline) ✅
 
-### AI Pipeline Components (Being Built by Team)
+### AI Pipeline (100% complete)
 
-**Components Assigned to Team Members** (via GitHub Issues):
 ```
 backend/pipeline/
-├── ✅ strategy.py          # DONE - Strategy selection (Rounak)
-├── ✅ orchestrator.py      # DONE - Pipeline coordinator (Rounak)
-├── ❌ ethics_gate.py       # IN PROGRESS - Jason (Issue #7)
-├── ❌ classifier.py        # IN PROGRESS - Shriivanth (Issue #8)
-├── ❌ generator.py         # IN PROGRESS - Jacob (Issue #9)
-└── ❌ critic.py            # IN PROGRESS - Arnav (Issue #10)
+├── ✅ __init__.py
+├── ✅ ethics_gate.py      # Hard rules + DeBERTa v3 zero-shot → BLOCKED|APPROVED|AMBIGUOUS
+├── ✅ classifier.py       # 3 zero-shot calls → emotion, intent, situation
+├── ✅ strategy.py         # Emotion-first selection + compliance overrides + YAML loader
+├── ✅ generator.py        # GPT-4o-mini with structured YAML-driven prompts
+├── ✅ critic.py           # Zero-shot validation + one-time bounded rewrite
+└── ✅ orchestrator.py     # Coordinates all steps + DB logging
 ```
 
-**Strategy Files Status**:
+### Strategy YAML Files (100% complete)
+
 ```
 backend/strategies/
-├── ✅ blocked/bereavement.yaml      # DONE
-├── ✅ blocked/high_risk.yaml        # DONE
-├── ✅ blocked/ambiguous.yaml        # DONE
-├── ✅ soft_persuasion/social_proof.yaml  # DONE
-├── ✅ soft_persuasion/authority.yaml     # DONE
-└── ✅ neutral/informational.yaml    # DONE
+├── blocked/
+│   ├── ✅ bereavement.yaml    # Loss/death: empathy only
+│   ├── ✅ high_risk.yaml      # Financial hardship: neutral info only
+│   └── ✅ ambiguous.yaml      # Unclear context: ask clarifying questions
+├── soft_persuasion/
+│   ├── ✅ social_proof.yaml   # Anxiety/fear: peer data reassurance
+│   └── ✅ authority.yaml      # Calm/advice-seeking: expert guidance
+└── neutral/
+    └── ✅ informational.yaml  # Default: factual, unbiased info
 ```
 
-**Frontend**:
-- ❌ No Chatscope UI integration yet (Arnav assigned - Issue #10)
-- Current frontend is empty placeholder
+### chat.py Updated
+- ✅ `backend/routers/chat.py` now calls `orchestrator.run_pipeline()`
+- ✅ Full debug data returned in `classification` field of ChatResponse
+- ✅ Fail-safe error handling (graceful fallback message on pipeline error)
 
-**Integration**:
-- ❌ Chat endpoint not wired to orchestrator yet (waiting for team components)
-- ❌ Database logging not implemented yet
+## What's NOT Built Yet ❌ (45% of the project)
+
+**Missing Frontend**:
+- No Chatscope UI integration
+- Current frontend is empty placeholder
 
 ---
 
@@ -457,25 +448,21 @@ def select_strategy(gate: dict, classification: dict) -> str:
 │   ├── ✅ main.py
 │   ├── routers/
 │   │   ├── ✅ conversations.py
-│   │   └── ⚠️  chat.py (placeholder, NOT wired to orchestrator yet)
-│   ├── ✅ pipeline/              # EXISTS NOW (40% done)
-│   │   ├── ✅ __init__.py
-│   │   ├── ❌ ethics_gate.py    # Jason working on this
-│   │   ├── ❌ classifier.py     # Shriivanth working on this
-│   │   ├── ✅ strategy.py       # DONE
-│   │   ├── ❌ generator.py      # Jacob working on this
-│   │   ├── ❌ critic.py         # Arnav working on this
-│   │   └── ✅ orchestrator.py   # DONE (using mocks for now)
-│   └── ✅ strategies/            # ALL DONE
-│       ├── ✅ blocked/
-│       │   ├── ✅ bereavement.yaml
-│       │   ├── ✅ high_risk.yaml
-│       │   └── ✅ ambiguous.yaml
-│       ├── ✅ soft_persuasion/
-│       │   ├── ✅ social_proof.yaml
-│       │   └── ✅ authority.yaml
-│       └── ✅ neutral/
-│           └── ✅ informational.yaml
+│   │   └── ⚠️  chat.py (placeholder, NOT real AI yet)
+│   ├── ❌ pipeline/              # DOESN'T EXIST (0% done)
+│   │   ├── ❌ ethics_gate.py
+│   │   ├── ❌ classifier.py
+│   │   ├── ❌ strategy.py
+│   │   ├── ❌ generator.py
+│   │   ├── ❌ critic.py
+│   │   └── ❌ orchestrator.py
+│   └── ❌ strategies/            # DOESN'T EXIST
+│       ├── ❌ blocked/
+│       │   ├── ❌ bereavement.yaml
+│       │   ├── ❌ high_risk.yaml
+│       │   └── ❌ ambiguous.yaml     # ← NEW
+│       ├── ❌ soft_persuasion/
+│       └── ❌ neutral/
 ├── frontend/
 │   └── ❌ src/App.jsx (needs Chatscope)
 ├── ✅ docker-compose.yml
@@ -493,30 +480,26 @@ def select_strategy(gate: dict, classification: dict) -> str:
 
 ---
 
-## Progress Tracking (Updated)
+## Progress Tracking (Honest)
 
 **Estimated Total Hours**: 14-16 hours
-**Hours Completed**: ~6 hours
-**Hours Remaining**: ~8-10 hours
-**Actual Progress**: 40%
+**Hours Completed**: ~2 hours (infrastructure only)
+**Hours Remaining**: ~12-14 hours
+**Actual Progress**: 15% (not 60%!)
 
-**Completed by Rounak**:
-- [x] 6 Strategy YAML files (2h)
-- [x] Strategy Selector with emotion-first logic (1h)
-- [x] Orchestrator with BLOCKED/AMBIGUOUS/APPROVED flows (2h)
-- [x] Testing strategy selector and orchestrator (30min)
-- [x] Updated documentation (30min)
+**Day 1 Goals**:
+- [ ] 6 Strategy YAML files (1h)
+- [ ] Ethics Gate with AMBIGUOUS (2h)
+- [ ] Classifier (2h)
+- [ ] Strategy Selector with AMBIGUOUS (1h)
+- [ ] Frontend (30min)
 
-**In Progress by Team** (via GitHub Issues):
-- [ ] Ethics Gate with AMBIGUOUS - Jason (Issue #7)
-- [ ] Classifier (emotion/intent/situation) - Shriivanth (Issue #8)
-- [ ] Generator + Strategy integration - Jacob (Issue #9)
-- [ ] Critic + Frontend - Arnav (Issue #10)
-
-**Remaining Tasks** (after team finishes):
-- [ ] Wire orchestrator into chat endpoint
-- [ ] Integration & Testing (all components together)
-- [ ] Demo Prep
+**Day 2 Goals**:
+- [ ] Generator (2h)
+- [ ] Critic (2h)
+- [ ] Orchestrator with AMBIGUOUS flow (2h)
+- [ ] Integration & Testing (2h)
+- [ ] Demo Prep (1h)
 
 ---
 
@@ -534,5 +517,5 @@ def select_strategy(gate: dict, classification: dict) -> str:
 
 ---
 
-**Status**: Strategy files & orchestrator complete. Team working on pipeline components.
-**Next Action**: Wait for team to finish their GitHub Issue assignments, then integrate and test.
+**Status**: Ready to start Day 1 implementation
+**Next Action**: Create 6 strategy YAML files (including ambiguous.yaml)
