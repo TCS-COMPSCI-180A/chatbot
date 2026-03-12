@@ -20,22 +20,22 @@ import os
 from typing import Optional
 
 _GEMINI_MODEL = "gemini-2.5-flash"
-_configured = False
+_client = None
 
 
-def _ensure_configured() -> None:
-    """Configure the Gemini client lazily on first use."""
-    global _configured
-    if not _configured:
-        import google.generativeai as genai  # type: ignore[import]
+def _get_client():
+    """Get or create the Gemini client (lazy init)."""
+    global _client
+    if _client is None:
+        from google import genai  # type: ignore[import]
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError(
                 "GOOGLE_API_KEY environment variable is not set. "
                 "Add it to your .env file."
             )
-        genai.configure(api_key=api_key)
-        _configured = True
+        _client = genai.Client(api_key=api_key)
+    return _client
 
 
 def _fmt_list(items) -> str:
@@ -121,6 +121,7 @@ def generate(
     strategy_config: dict,
     temperature: float = 0.7,
     max_tokens: int = 2000,
+    rewrite: bool = False,
 ) -> str:
     """
     Generate a compliant response using Gemini 2.5 Flash.
@@ -130,7 +131,8 @@ def generate(
         classification: Classification results (None for BLOCKED/AMBIGUOUS paths)
         strategy_config: Loaded strategy YAML dict
         temperature: Generation temperature (0.7 = natural but controlled)
-        max_tokens: Maximum response length in tokens (2000 to account for system prompt overhead)
+        max_tokens: Maximum response length in tokens
+        rewrite: If True, adds a rewrite instruction to the prompt
 
     Returns:
         Generated response text (stripped)
@@ -138,18 +140,21 @@ def generate(
     Raises:
         ValueError: If GOOGLE_API_KEY is not set
     """
-    import google.generativeai as genai  # type: ignore[import]
-    _ensure_configured()
+    from google import genai  # type: ignore[import]
+    from google.genai import types  # type: ignore[import]
+
+    client = _get_client()
     system_prompt = build_system_prompt(strategy_config, classification)
 
-    model = genai.GenerativeModel(
-        model_name=_GEMINI_MODEL,
-        system_instruction=system_prompt,
-    )
+    user_message = message
+    if rewrite:
+        user_message = f"{message}\n\n[Please rewrite your previous response to better comply with the guidelines.]"
 
-    response = model.generate_content(
-        message,
-        generation_config=genai.GenerationConfig(
+    response = client.models.generate_content(
+        model=_GEMINI_MODEL,
+        contents=user_message,
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt,
             temperature=temperature,
             max_output_tokens=max_tokens,
         ),

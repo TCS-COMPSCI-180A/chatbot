@@ -8,25 +8,13 @@ import logging
 
 # Import pipeline components (these will be created by team members)
 try:
-    from backend.pipeline import ethics_gate, classifier, strategy, generator, critic
+    from pipeline import ethics_gate, classifier, strategy, generator, critic
 except ImportError:
-    try:
-        # For running standalone during development
-        import ethics_gate, classifier, strategy, generator, critic
-    except ImportError:
-        # Mock for testing before all components are ready
-        ethics_gate = None
-        classifier = None
-        strategy = None
-        generator = None
-        critic = None
-
-# Ensure strategy is imported
-if strategy is None:
-    try:
-        from backend.pipeline import strategy
-    except ImportError:
-        import strategy
+    ethics_gate = None
+    classifier = None
+    strategy = None
+    generator = None
+    critic = None
 
 logger = logging.getLogger(__name__)
 

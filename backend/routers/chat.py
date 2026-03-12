@@ -6,7 +6,7 @@ Wired to orchestrator for full AI pipeline integration (demo version without dat
 from fastapi import APIRouter
 import random
 
-from backend.pipeline import orchestrator
+from pipeline import orchestrator
 
 router = APIRouter(
     prefix="/api/v1/chat",

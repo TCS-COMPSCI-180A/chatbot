@@ -6,7 +6,7 @@ Uses zero-shot classification (shared DeBERTa v3 instance) + hard-coded pattern 
 
 from typing import Optional, List, Dict
 import logging
-from backend.pipeline.ethics_gate import _get_classifier
+from pipeline.ethics_gate import _get_classifier
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +113,7 @@ def validate_and_maybe_rewrite(
     Returns:
         (final_response: str, critic_result: dict)
     """
-    from backend.pipeline import generator  # local import avoids circular dependency
+    from pipeline import generator  # local import avoids circular dependency
 
     critic_result = score_response(response, strategy, gate)
 

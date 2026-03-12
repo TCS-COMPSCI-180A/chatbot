@@ -64,7 +64,7 @@ def _get_classifier():
     global _classifier
     if _classifier is None:
         # Import from ethics_gate to reuse the same singleton
-        from backend.pipeline.ethics_gate import _get_classifier as get_gate_clf
+        from pipeline.ethics_gate import _get_classifier as get_gate_clf
         _classifier = get_gate_clf()
     return _classifier
 
