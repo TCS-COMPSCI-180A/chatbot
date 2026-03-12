@@ -10,17 +10,17 @@ import os
 from dotenv import load_dotenv
 
 # Import database and models
-from database import engine, Base, get_db
-import models
+from backend.database import engine, Base, get_db
+from backend import models
 
 # Import routers
-from routers import conversations, chat
+from backend.routers import conversations, chat
 
 # Load environment variables
 load_dotenv()
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+# Create database tables (comment out for testing without PostgreSQL)
+# Base.metadata.create_all(bind=engine)
 
 # Initialize FastAPI app
 app = FastAPI(

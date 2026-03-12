@@ -5,9 +5,9 @@ Conversation management endpoints
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-from database import get_db
-from models import Conversation, Message, ConversationStatus
-from schemas import (
+from backend.database import get_db
+from backend.models import Conversation, Message, ConversationStatus
+from backend.schemas import (
     ConversationCreate,
     ConversationResponse,
     ConversationListResponse

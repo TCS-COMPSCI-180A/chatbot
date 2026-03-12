@@ -5,7 +5,7 @@ SQLAlchemy database models
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum, JSON, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from database import Base
+from backend.database import Base
 import enum
 
 
@@ -80,7 +80,7 @@ class Message(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Additional data (e.g., model used, tokens, etc.)
-    metadata = Column(JSON, nullable=True)
+    message_metadata = Column(JSON, nullable=True)
 
     # Relationships
     conversation = relationship("Conversation", back_populates="messages")
