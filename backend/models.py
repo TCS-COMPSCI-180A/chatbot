@@ -2,11 +2,13 @@
 SQLAlchemy database models
 """
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum, JSON, Float
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum, JSON, Float, UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from backend.database import Base
+from pgvector.sqlalchemy import Vector
 import enum
+import uuid
 
 
 class ConversationStatus(str, enum.Enum):
@@ -125,6 +127,10 @@ class Classification(Base):
     # Full classification data (for auditability)
     raw_classification_data = Column(JSON, nullable=True)
 
+    # Document context (v2 — populated when a document was uploaded in the session)
+    document_type = Column(String(100), nullable=True)       # bank_statement | loan_agreement | ...
+    document_doc_id = Column(String(36), nullable=True)      # UUID of the document_chunks record
+
     # Metadata
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     classifier_version = Column(String(50), nullable=True)  # Track which model version was used
@@ -134,3 +140,24 @@ class Classification(Base):
 
     def __repr__(self):
         return f"<Classification(id={self.id}, gate_decision={self.gate_decision}, situation_type={self.situation_type})>"
+
+
+class DocumentChunk(Base):
+    """
+    Stores pgvector-embedded chunks of uploaded banking documents.
+    Used by the Document Analysis Agent for semantic retrieval.
+    One document → many chunks, all sharing the same doc_id UUID.
+    """
+    __tablename__ = "document_chunks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    doc_id = Column(String(36), nullable=False, index=True)   # UUID — groups all chunks for one upload
+    session_id = Column(String(255), nullable=True, index=True)
+    chunk_index = Column(Integer, nullable=True)               # position within the document
+    chunk_text = Column(Text, nullable=False)
+    embedding = Column(Vector(1536), nullable=True)            # text-embedding-3-small output
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    def __repr__(self):
+        return f"<DocumentChunk(doc_id={self.doc_id}, chunk_index={self.chunk_index})>"
