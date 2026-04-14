@@ -10,6 +10,12 @@ Handles the full lifecycle of an uploaded banking document:
 
 from __future__ import annotations
 
+import io
+
+import pdfplumber
+import pytesseract
+from PIL import Image, ImageFilter, ImageOps
+
 
 def parse_pdf_document(file_bytes: bytes) -> str:
     """Extract raw text from a PDF file.
@@ -23,7 +29,16 @@ def parse_pdf_document(file_bytes: bytes) -> str:
     Returns:
         Full extracted text as a single string.
     """
-    raise NotImplementedError
+    with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+        pages = [page.extract_text() or "" for page in pdf.pages]
+
+    text = "\n".join(pages).strip()
+
+    # If PDFPlumber found no text, the PDF is likely a scanned image — fall back to OCR
+    if not text:
+        text = ocr_image_document(file_bytes)
+
+    return text
 
 
 def ocr_image_document(file_bytes: bytes) -> str:
@@ -38,7 +53,16 @@ def ocr_image_document(file_bytes: bytes) -> str:
     Returns:
         Extracted text as a single string.
     """
-    raise NotImplementedError
+    image = Image.open(io.BytesIO(file_bytes))
+
+    # Convert to greyscale — improves OCR accuracy on most scanned docs
+    image = ImageOps.grayscale(image)
+
+    # Sharpen slightly to help Tesseract with low-contrast text
+    image = image.filter(ImageFilter.SHARPEN)
+
+    text = pytesseract.image_to_string(image, lang="eng")
+    return text.strip()
 
 
 def classify_banking_document(text: str) -> str:
