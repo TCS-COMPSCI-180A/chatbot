@@ -1,64 +1,67 @@
 """
-Document ingestion pipeline.
-
-Handles the full lifecycle of an uploaded banking document:
-  1. parse_pdf_document     — extract raw text from a PDF
-  2. ocr_image_document     — extract text from an image via OCR
-  3. classify_banking_document — identify the document type
-  4. chunk_and_embed_document  — chunk text, embed, store in pgvector
+Document ingestion pipeline - handles parsing, classifying, chunking, and embedding uploaded banking documents.
 """
 
 from __future__ import annotations
 
 import io
+import logging
 
 import pdfplumber
 import pytesseract
 from PIL import Image, ImageFilter, ImageOps
 
+logger = logging.getLogger(__name__)
+
+# labels we pass to DeBERTa for zero-shot document classification
+DOCUMENT_TYPE_LABELS: list[str] = [
+    "bank statement",
+    "loan agreement",
+    "mortgage statement",
+    "credit card statement",
+    "certificate of deposit or savings statement",
+    "credit report",
+    "foreclosure notice",
+    "bankruptcy filing",
+]
+
+# converts plain english labels back to snake_case for the db/state
+_LABEL_TO_TYPE: dict[str, str] = {
+    "bank statement":                                 "bank_statement",
+    "loan agreement":                                 "loan_agreement",
+    "mortgage statement":                             "mortgage_statement",
+    "credit card statement":                          "credit_card_statement",
+    "certificate of deposit or savings statement":    "cd_savings_statement",
+    "credit report":                                  "credit_report",
+    "foreclosure notice":                             "foreclosure_notice",
+    "bankruptcy filing":                              "bankruptcy_filing",
+}
+
 
 def parse_pdf_document(file_bytes: bytes) -> str:
-    """Extract raw text from a PDF file.
-
-    Uses PDFPlumber for text-layer PDFs. Falls back to OCR via
-    ocr_image_document() if no text layer is detected.
-
-    Args:
-        file_bytes: Raw bytes of the uploaded PDF file.
-
-    Returns:
-        Full extracted text as a single string.
-    """
+    """Extract text from a PDF, falling back to OCR if there's no text layer."""
+    # wrap bytes in BytesIO so pdfplumber can read it without a temp file
     with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
         pages = [page.extract_text() or "" for page in pdf.pages]
 
     text = "\n".join(pages).strip()
 
-    # If PDFPlumber found no text, the PDF is likely a scanned image — fall back to OCR
+    # no text means its probably a scanned image, use OCR instead
     if not text:
+        logger.info("[Ingestion] No text layer found — falling back to OCR.")
         text = ocr_image_document(file_bytes)
 
     return text
 
 
 def ocr_image_document(file_bytes: bytes) -> str:
-    """Extract text from an image (JPG, PNG, TIFF) using Tesseract OCR.
-
-    Pre-processes the image for contrast and deskew before passing
-    to pytesseract to improve accuracy on scanned documents.
-
-    Args:
-        file_bytes: Raw bytes of the uploaded image file.
-
-    Returns:
-        Extracted text as a single string.
-    """
+    """Extract text from a scanned image using Tesseract OCR."""
     image = Image.open(io.BytesIO(file_bytes))
 
-    # Convert to greyscale — improves OCR accuracy on most scanned docs
+    # grayscale improves OCR accuracy by removing color noise
     image = ImageOps.grayscale(image)
 
-    # Sharpen slightly to help Tesseract with low-contrast text
+    # sharpening helps tesseract read low-contrast text
     image = image.filter(ImageFilter.SHARPEN)
 
     text = pytesseract.image_to_string(image, lang="eng")
@@ -66,36 +69,39 @@ def ocr_image_document(file_bytes: bytes) -> str:
 
 
 def classify_banking_document(text: str) -> str:
-    """Identify the type of banking document from its content.
+    """Identify what type of banking document this is using DeBERTa zero-shot classification."""
+    if not text or not text.strip():
+        logger.warning("[DocumentClassifier] Empty text — returning unknown.")
+        return "unknown"
 
-    Uses DeBERTa v3 zero-shot classification against a fixed set of
-    banking document labels.
+    # only need the first 1000 chars, doc type is always clear from the header
+    sample = text[:1000]
 
-    Args:
-        text: Raw text extracted from the document.
+    try:
+        # reuse the ethics gate's model instance so we don't load DeBERTa twice
+        from backend.pipeline.ethics_gate import _get_classifier
+        clf = _get_classifier()
+        result = clf(
+            sequences=sample,
+            candidate_labels=DOCUMENT_TYPE_LABELS,
+            multi_label=False,
+        )
+    except Exception as exc:
+        logger.error(f"[DocumentClassifier] Classification failed: {exc}", exc_info=True)
+        return "unknown"
 
-    Returns:
-        One of: bank_statement | loan_agreement | mortgage_statement |
-        credit_card_statement | cd_savings_statement | credit_report |
-        foreclosure_notice | bankruptcy_filing | unknown
-    """
-    raise NotImplementedError
+    top_label: str = result["labels"][0]
+    top_score: float = result["scores"][0]
+
+    logger.debug(f"[DocumentClassifier] top='{top_label}' score={top_score:.3f}")
+
+    # below 0.4 confidence we don't trust the result
+    if top_score < 0.4:
+        return "unknown"
+
+    return _LABEL_TO_TYPE.get(top_label, "unknown")
 
 
 def chunk_and_embed_document(text: str, session_id: str) -> str:
-    """Split a document into chunks, embed each chunk, and store in pgvector.
-
-    Chunks are 512 tokens with a 50-token overlap. Each chunk is embedded
-    using OpenAI text-embedding-3-small (1536 dims) and stored as a row
-    in the document_chunks table.
-
-    Args:
-        text:       Full document text to chunk and embed.
-        session_id: Session identifier — stored on each chunk for later
-                    retrieval within the same conversation.
-
-    Returns:
-        doc_id: A UUID string that groups all chunks for this upload.
-                Pass this to retrieve_relevant_chunks() for retrieval.
-    """
+    """Split document into 512-token chunks, embed each with OpenAI, and store in pgvector. Returns doc_id."""
     raise NotImplementedError

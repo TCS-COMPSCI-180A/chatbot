@@ -1,84 +1,57 @@
 """
-Banking document figure extractors.
-
-Pulls structured key figures from raw document text on a per-doc-type basis.
-Uses regex patterns as the primary extraction method, with an LLM fallback
-for fields that are inconsistently formatted across issuers.
+Per-document-type extractors that pull key financial figures from raw text using regex.
 """
 
 from __future__ import annotations
 
 
 def extract_banking_figures(text: str, doc_type: str) -> dict:
-    """Extract structured financial figures from document text.
+    """Dispatch to the right extractor based on document type and return key figures."""
+    extractors = {
+        "bank_statement":        _extract_bank_statement,
+        "loan_agreement":        _extract_loan_agreement,
+        "mortgage_statement":    _extract_mortgage_statement,
+        "credit_card_statement": _extract_credit_card_statement,
+        "cd_savings_statement":  _extract_cd_savings_statement,
+        "credit_report":         _extract_credit_report,
+    }
 
-    Dispatches to a doc-type-specific extractor based on doc_type.
-    Returns an empty dict for unrecognised doc types rather than raising.
+    extractor = extractors.get(doc_type)
 
-    Args:
-        text:     Raw text of the document (from parse_pdf_document or OCR).
-        doc_type: Document type string returned by classify_banking_document.
-                  Expected values:
-                    bank_statement | loan_agreement | mortgage_statement |
-                    credit_card_statement | cd_savings_statement | credit_report
+    # unknown or unhandled doc type — return empty, pipeline handles this gracefully
+    if extractor is None:
+        return {}
 
-    Returns:
-        Dict of extracted figures. Keys vary by doc_type:
-
-        bank_statement:
-            current_balance, avg_balance, total_fees, overdraft_count,
-            overdraft_total, top_merchants (list)
-
-        loan_agreement:
-            principal, apr, monthly_payment, term_months,
-            remaining_balance, prepayment_penalty
-
-        mortgage_statement:
-            principal_balance, interest_rate, monthly_payment,
-            escrow_balance, payoff_amount
-
-        credit_card_statement:
-            balance, apr, min_payment, credit_limit,
-            utilization_pct, statement_date
-
-        cd_savings_statement:
-            balance, apy, maturity_date, interest_earned
-
-        credit_report:
-            fico_score, utilization_pct, derogatory_marks
-    """
-    raise NotImplementedError
+    return extractor(text)
 
 
-# ---------------------------------------------------------------------------
-# Private per-doc-type extractors (called by extract_banking_figures)
-# ---------------------------------------------------------------------------
+# --- private extractors, one per doc type ---
 
 def _extract_bank_statement(text: str) -> dict:
-    """Extract figures from a bank statement."""
+    """Pull balance, fees, and overdraft info from a bank statement."""
     raise NotImplementedError
 
 
 def _extract_loan_agreement(text: str) -> dict:
-    """Extract figures from a loan agreement."""
+    """Pull principal, APR, payment, and term from a loan agreement."""
     raise NotImplementedError
 
 
 def _extract_mortgage_statement(text: str) -> dict:
-    """Extract figures from a mortgage statement."""
+    """Pull balance, rate, payment, and escrow from a mortgage statement."""
     raise NotImplementedError
 
 
 def _extract_credit_card_statement(text: str) -> dict:
-    """Extract figures from a credit card statement."""
+    """Pull balance, APR, limit, and utilization from a credit card statement."""
     raise NotImplementedError
 
 
 def _extract_cd_savings_statement(text: str) -> dict:
-    """Extract figures from a CD or savings statement."""
+    """Pull balance, APY, and maturity date from a CD or savings statement."""
     raise NotImplementedError
 
 
 def _extract_credit_report(text: str) -> dict:
-    """Extract figures from a credit report."""
+    """Pull FICO score, utilization, and derogatory marks from a credit report."""
     raise NotImplementedError
