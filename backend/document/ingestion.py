@@ -105,11 +105,44 @@ def classify_banking_document(text: str) -> str:
 def chunk_and_embed_document(text: str, session_id: str) -> str:
     """Split document into 512-token chunks, embed each with OpenAI, and store in pgvector. Returns doc_id."""
     import uuid
+    from openai import OpenAI
+    from backend.database import SessionLocal
+    from backend.models import DocumentChunk
+
     doc_id = str(uuid.uuid4())
     chunks = _chunk_text(text)
-    logger.info(f"[Ingestion] {len(chunks)} chunks generated for doc_id={doc_id}")
-    # embedding + DB storage added in next commit
-    raise NotImplementedError
+    logger.info(f"[Ingestion] {len(chunks)} chunks to embed for doc_id={doc_id}")
+
+    client = OpenAI()
+    db = SessionLocal()
+
+    try:
+        for i, chunk in enumerate(chunks):
+            # embed one chunk at a time
+            response = client.embeddings.create(
+                model="text-embedding-3-small",
+                input=chunk,
+            )
+            vector = response.data[0].embedding
+
+            db.add(DocumentChunk(
+                doc_id=doc_id,
+                session_id=session_id,
+                chunk_index=i,
+                chunk_text=chunk,
+                embedding=vector,
+            ))
+
+        db.commit()
+        logger.info(f"[Ingestion] Stored {len(chunks)} chunks for doc_id={doc_id}")
+    except Exception as exc:
+        db.rollback()
+        logger.error(f"[Ingestion] Failed to embed/store chunks: {exc}", exc_info=True)
+        raise
+    finally:
+        db.close()
+
+    return doc_id
 
 
 def _chunk_text(text: str, chunk_size: int = 400, overlap: int = 50) -> list[str]:
