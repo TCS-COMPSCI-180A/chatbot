@@ -104,4 +104,25 @@ def classify_banking_document(text: str) -> str:
 
 def chunk_and_embed_document(text: str, session_id: str) -> str:
     """Split document into 512-token chunks, embed each with OpenAI, and store in pgvector. Returns doc_id."""
+    import uuid
+    doc_id = str(uuid.uuid4())
+    chunks = _chunk_text(text)
+    logger.info(f"[Ingestion] {len(chunks)} chunks generated for doc_id={doc_id}")
+    # embedding + DB storage added in next commit
     raise NotImplementedError
+
+
+def _chunk_text(text: str, chunk_size: int = 400, overlap: int = 50) -> list[str]:
+    """Split text into overlapping word-based chunks (~512 tokens each)."""
+    words = text.split()
+    chunks = []
+    start = 0
+
+    while start < len(words):
+        end = start + chunk_size
+        chunk = " ".join(words[start:end])
+        chunks.append(chunk)
+        # step forward by chunk_size minus overlap so adjacent chunks share context
+        start += chunk_size - overlap
+
+    return chunks
