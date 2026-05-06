@@ -1,12 +1,12 @@
 """
 Chat endpoint - main conversational interface.
-Wired to orchestrator for full AI pipeline integration (demo version without database).
+Wired to the LangGraph runner (graph/runner.py) for the v2 agentic pipeline.
 """
 
 from fastapi import APIRouter
 import random
 
-from pipeline import orchestrator
+from graph.runner import run_pipeline
 
 router = APIRouter(
     prefix="/api/v1/chat",
@@ -17,19 +17,22 @@ router = APIRouter(
 @router.post("")
 async def chat(request: dict):
     """
-    Process a chat message through the AI pipeline.
+    Process a chat message through the LangGraph AI pipeline.
 
-    Simple demo version - calls orchestrator, returns response to frontend.
+    Accepts { message, conversation_id?, session_id? } JSON body.
+    Returns { conversation_id, assistant_message: { content }, classification }.
     """
 
     message = request.get("message", "")
     conversation_id = request.get("conversation_id") or random.randint(1000, 9999)
+    session_id = request.get("session_id") or str(conversation_id)
 
-    # Run AI pipeline
+    # Run LangGraph pipeline
     try:
-        pipeline_result = await orchestrator.run_pipeline(
+        pipeline_result = await run_pipeline(
             message=message,
-            conversation_id=conversation_id
+            session_id=session_id,
+            conversation_id=conversation_id,
         )
 
         response_text = pipeline_result["response"]
@@ -58,11 +61,12 @@ async def chat_health():
         "service": "chat",
         "pipeline_status": "fully_operational",
         "components": {
-            "ethics_gate": "operational",
-            "classifier": "operational",
-            "strategy": "operational",
-            "generator": "operational (Gemini 2.5 Flash)",
-            "critic": "operational",
-            "orchestrator": "operational"
+            "entry":          "operational",
+            "classifier":     "operational",
+            "ethics_gate":    "operational",
+            "generator":      "operational (Gemini 2.5 Flash)",
+            "critic":         "operational",
+            "db_logger":      "operational",
+            "graph_runner":   "operational (LangGraph)",
         }
     }
