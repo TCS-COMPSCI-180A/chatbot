@@ -10,6 +10,7 @@ import logging
 import pdfplumber
 import pytesseract
 from PIL import Image, ImageFilter, ImageOps
+from pdfminer.pdfdocument import PDFPasswordIncorrect
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +41,15 @@ _LABEL_TO_TYPE: dict[str, str] = {
 
 def parse_pdf_document(file_bytes: bytes) -> str:
     """Extract text from a PDF, falling back to OCR if there's no text layer."""
-    # wrap bytes in BytesIO so pdfplumber can read it without a temp file
-    with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
-        pages = [page.extract_text() or "" for page in pdf.pages]
+    try:
+        # wrap bytes in BytesIO so pdfplumber can read it without a temp file
+        with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+            pages = [page.extract_text(x_tolerance=1, y_tolerance=3) or "" for page in pdf.pages]
+    except PDFPasswordIncorrect as exc:
+        raise ValueError("password_protected_pdf") from exc
+    except Exception as exc:
+        logger.warning("[Ingestion] PDF parse failed; trying OCR fallback: %s", exc)
+        return ocr_image_document(file_bytes)
 
     text = "\n".join(pages).strip()
 
@@ -56,7 +63,10 @@ def parse_pdf_document(file_bytes: bytes) -> str:
 
 def ocr_image_document(file_bytes: bytes) -> str:
     """Extract text from a scanned image using Tesseract OCR."""
-    image = Image.open(io.BytesIO(file_bytes))
+    try:
+        image = Image.open(io.BytesIO(file_bytes))
+    except Exception as exc:
+        raise ValueError("unsupported_or_unreadable_document") from exc
 
     # grayscale improves OCR accuracy by removing color noise
     image = ImageOps.grayscale(image)
@@ -79,7 +89,10 @@ def classify_banking_document(text: str) -> str:
 
     try:
         # reuse the ethics gate's model instance so we don't load DeBERTa twice
-        from backend.pipeline.ethics_gate import _get_classifier
+        try:
+            from backend.pipeline.ethics_gate import _get_classifier
+        except ImportError:
+            from pipeline.ethics_gate import _get_classifier
         clf = _get_classifier()
         result = clf(
             sequences=sample,
@@ -102,28 +115,51 @@ def classify_banking_document(text: str) -> str:
     return _LABEL_TO_TYPE.get(top_label, "unknown")
 
 
+def extract_banking_figures(text: str, doc_type: str) -> dict:
+    """Pull structured banking figures from parsed document text."""
+    try:
+        from backend.document.extractors import extract_banking_figures as extract
+    except ImportError:
+        from document.extractors import extract_banking_figures as extract
+
+    return extract(text, doc_type)
+
+
 def chunk_and_embed_document(text: str, session_id: str) -> str:
     """Split document into 512-token chunks, embed each with OpenAI, and store in pgvector. Returns doc_id."""
     import uuid
     from openai import OpenAI
-    from backend.database import SessionLocal
-    from backend.models import DocumentChunk
+    try:
+        from backend.database import SessionLocal
+        from backend.models import DocumentChunk
+    except ImportError:
+        from database import SessionLocal
+        from models import DocumentChunk
 
     doc_id = str(uuid.uuid4())
     chunks = _chunk_text(text)
     logger.info(f"[Ingestion] {len(chunks)} chunks to embed for doc_id={doc_id}")
+
+    if not chunks:
+        logger.warning("[Ingestion] No chunks produced for doc_id=%s", doc_id)
+        return doc_id
 
     client = OpenAI()
     db = SessionLocal()
 
     try:
         for i, chunk in enumerate(chunks):
-            # embed one chunk at a time
-            response = client.embeddings.create(
-                model="text-embedding-3-small",
-                input=chunk,
-            )
-            vector = response.data[0].embedding
+            try:
+                # embed one chunk at a time; if embeddings are unavailable,
+                # still persist text chunks so lexical retrieval can work.
+                response = client.embeddings.create(
+                    model="text-embedding-3-small",
+                    input=chunk,
+                )
+                vector = response.data[0].embedding
+            except Exception as exc:
+                logger.warning("[Ingestion] Embedding failed for chunk %s; storing text only: %s", i, exc)
+                vector = None
 
             db.add(DocumentChunk(
                 doc_id=doc_id,
@@ -147,6 +183,11 @@ def chunk_and_embed_document(text: str, session_id: str) -> str:
 
 def _chunk_text(text: str, chunk_size: int = 400, overlap: int = 50) -> list[str]:
     """Split text into overlapping word-based chunks (~512 tokens each)."""
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be positive")
+    if overlap < 0 or overlap >= chunk_size:
+        raise ValueError("overlap must be non-negative and smaller than chunk_size")
+
     words = text.split()
     chunks = []
     start = 0
