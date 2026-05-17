@@ -77,21 +77,32 @@ USER CONTEXT (detected by classifier):
 - Business Situation: {situation}
 """
 
+        document_insights = classification.get("document_insights") or []
+        if document_insights:
+            formatted_insights = _fmt_list(document_insights)
+            context_section += f"""
+DOCUMENT CONTEXT:
+{formatted_insights}
+
+When using document context:
+- Cite at least two specific document figures when possible.
+- Do not invent figures or use generic statistics in place of the uploaded document.
+- Tie recommendations directly to the listed document evidence.
+"""
+
     # Add TCS product context for APPROVED/AMBIGUOUS strategies (not for BLOCKED)
     tcs_products_section = ""
     strategy_name = strategy.get('name', '')
     if 'block' not in strategy_name.lower():  # APPROVED or AMBIGUOUS flows
         tcs_products_section = """
 TCS FINANCIAL SERVICES CONTEXT:
-- When discussing retirement planning, you may reference TCS 401k plans and pension programs
-- When discussing insurance, you may reference TCS life insurance, health insurance, and disability coverage options
-- When discussing investments, you may reference TCS investment accounts and wealth management services
+- When discussing banking, you may reference TCS banking options only when relevant to the customer's question
 - Always frame TCS products as options to explore, never as mandatory choices
 - If appropriate to the conversation, you may mention: "TCS offers [relevant product/service] that may align with your goals"
 """
 
     system_prompt = f"""You are a professional financial services assistant for TCS (Tata Consultancy Services).
-You help customers with financial products including 401k plans, insurance policies, and investment accounts.
+You help customers with retail banking products including deposit accounts, credit cards, personal loans, auto loans, mortgages, transfers, fees, and account operations.
 {tcs_products_section}
 
 ASSIGNED STRATEGY: {strategy.get('name', 'Informational')}

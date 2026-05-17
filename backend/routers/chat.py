@@ -1,9 +1,10 @@
 """
 Chat endpoint - main conversational interface.
 Wired to the LangGraph runner (graph/runner.py) for the v2 agentic pipeline.
+Handles both JSON and multipart/form-data (for document uploads).
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 import random
 
 from graph.runner import run_pipeline
@@ -15,17 +16,31 @@ router = APIRouter(
 
 
 @router.post("")
-async def chat(request: dict):
+async def chat(request: Request):
     """
     Process a chat message through the LangGraph AI pipeline.
 
-    Accepts { message, conversation_id?, session_id? } JSON body.
+    Accepts JSON { message, conversation_id?, session_id? } or
+    multipart/form-data { message, conversation_id?, document? } for file uploads.
     Returns { conversation_id, assistant_message: { content }, classification }.
     """
 
-    message = request.get("message", "")
-    conversation_id = request.get("conversation_id") or random.randint(1000, 9999)
-    session_id = request.get("session_id") or str(conversation_id)
+    content_type = request.headers.get("content-type", "")
+    document_bytes = None
+
+    if content_type.startswith("multipart/form-data"):
+        form = await request.form()
+        message = str(form.get("message", ""))
+        conversation_id = form.get("conversation_id") or random.randint(1000, 9999)
+        upload = form.get("document") or form.get("file")
+        if upload is not None and hasattr(upload, "read"):
+            document_bytes = await upload.read()
+    else:
+        body = await request.json()
+        message = body.get("message", "")
+        conversation_id = body.get("conversation_id") or random.randint(1000, 9999)
+
+    session_id = str(conversation_id)
 
     # Run LangGraph pipeline
     try:
@@ -33,6 +48,7 @@ async def chat(request: dict):
             message=message,
             session_id=session_id,
             conversation_id=conversation_id,
+            document_bytes=document_bytes,
         )
 
         response_text = pipeline_result["response"]

@@ -127,9 +127,9 @@ class Classification(Base):
     # Full classification data (for auditability)
     raw_classification_data = Column(JSON, nullable=True)
 
-    # Document context (v2 — populated when a document was uploaded in the session)
-    document_type = Column(String(100), nullable=True)       # bank_statement | loan_agreement | ...
-    document_doc_id = Column(String(36), nullable=True)      # UUID of the document_chunks record
+    # tracks which document (if any) was uploaded during this conversation
+    document_type = Column(String(100), nullable=True)    # e.g. "bank_statement"
+    document_doc_id = Column(String(36), nullable=True)   # links to document_chunks table
 
     # Metadata
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -143,19 +143,15 @@ class Classification(Base):
 
 
 class DocumentChunk(Base):
-    """
-    Stores pgvector-embedded chunks of uploaded banking documents.
-    Used by the Document Analysis Agent for semantic retrieval.
-    One document → many chunks, all sharing the same doc_id UUID.
-    """
+    """Stores pgvector embeddings of uploaded document chunks for semantic retrieval."""
     __tablename__ = "document_chunks"
 
     id = Column(Integer, primary_key=True, index=True)
-    doc_id = Column(String(36), nullable=False, index=True)   # UUID — groups all chunks for one upload
+    doc_id = Column(String(36), nullable=False, index=True)     # groups all chunks from one upload
     session_id = Column(String(255), nullable=True, index=True)
-    chunk_index = Column(Integer, nullable=True)               # position within the document
+    chunk_index = Column(Integer, nullable=True)                 # position within the document
     chunk_text = Column(Text, nullable=False)
-    embedding = Column(Vector(1536), nullable=True)            # text-embedding-3-small output
+    embedding = Column(Vector(1536), nullable=True)              # 1536-dim vector from text-embedding-3-small
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 

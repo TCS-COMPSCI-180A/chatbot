@@ -7,8 +7,14 @@ pydantic-settings>=2.1.0
 # Graph orchestration
 langgraph>=0.2.0
 
+# Document parsing
+pdfplumber>=0.10.0
+pytesseract>=0.3.10
+Pillow>=10.0.0
+
 # AI/ML Libraries
 google-genai>=1.0.0
+openai>=1.30.0
 transformers>=4.36.0
 torch>=2.1.0
 sentence-transformers>=2.3.1

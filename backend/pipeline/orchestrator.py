@@ -19,7 +19,12 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-async def run_pipeline(message: str, conversation_id: Optional[int] = None) -> Dict:
+async def run_pipeline(
+    message: str,
+    conversation_id: Optional[int] = None,
+    document_bytes: Optional[bytes] = None,
+    document_filename: Optional[str] = None,
+) -> Dict:
     """
     Run full AI pipeline for a user message
 
@@ -32,6 +37,8 @@ async def run_pipeline(message: str, conversation_id: Optional[int] = None) -> D
     Args:
         message: User's input text
         conversation_id: Optional conversation ID for context
+        document_bytes: Optional uploaded PDF/image bytes
+        document_filename: Original filename, used as a weak parser hint
 
     Returns:
         Dict with:
@@ -39,6 +46,12 @@ async def run_pipeline(message: str, conversation_id: Optional[int] = None) -> D
         - debug: Full decision trace for auditability
     """
     logger.info(f"========== Starting pipeline for message: {message[:50]}... ==========")
+
+    document_context = _process_document(
+        document_bytes=document_bytes,
+        document_filename=document_filename,
+        session_id=str(conversation_id) if conversation_id is not None else "",
+    )
 
     # STEP 1: Ethics Gate (always runs first)
     logger.info("STEP 1: Running ethics gate...")
@@ -48,6 +61,15 @@ async def run_pipeline(message: str, conversation_id: Optional[int] = None) -> D
         gate = {"decision": "APPROVED", "reason": "mock", "confidence": 1.0}
     else:
         gate = ethics_gate.evaluate(message)
+
+    if document_context.get("document_type") in {"foreclosure_notice", "bankruptcy_filing"}:
+        gate = {
+            "decision": "BLOCKED",
+            "reason": f"document_type:{document_context['document_type']}",
+            "confidence": 1.0,
+            "layer": "document_type",
+            "raw": None,
+        }
 
     logger.info(f"Gate decision: {gate['decision']} (reason: {gate.get('reason')}, confidence: {gate.get('confidence')})")
 
@@ -61,7 +83,8 @@ async def run_pipeline(message: str, conversation_id: Optional[int] = None) -> D
             "classification": None,
             "strategy": None,
             "critic_score": None,
-            "critic_violations": None
+            "critic_violations": None,
+            **document_context,
         }
     }
 
@@ -130,6 +153,24 @@ async def run_pipeline(message: str, conversation_id: Optional[int] = None) -> D
         else:
             classification = classifier.classify(message)
 
+        if document_context.get("has_document"):
+            logger.info("STEP 3b: Running document analysis...")
+            try:
+                try:
+                    from backend.agents.document_analysis_agent import run_document_analysis
+                except ImportError:
+                    from agents.document_analysis_agent import run_document_analysis
+
+                analysis_state = {
+                    "message": message,
+                    "session_id": str(conversation_id) if conversation_id is not None else "",
+                    **document_context,
+                }
+                document_context.update(run_document_analysis(analysis_state))
+            except Exception as exc:
+                logger.error("Document analysis failed: %s", exc, exc_info=True)
+                document_context["document_error"] = str(exc)
+
         logger.info(f"Classification: emotion={classification['emotion']}, intent={classification['intent']}, situation={classification.get('situation')}")
 
         # Select strategy
@@ -144,7 +185,8 @@ async def run_pipeline(message: str, conversation_id: Optional[int] = None) -> D
             logger.error("Generator not implemented yet - using mock response")
             response = f"[APPROVED - Mock response for: {message}]"
         else:
-            response = generator.generate(message, classification, strategy_config)
+            generator_context = {**classification, **document_context}
+            response = generator.generate(message, generator_context, strategy_config)
 
         # Validate with critic
         logger.info("STEP 6: Validating response with critic...")
@@ -165,7 +207,7 @@ async def run_pipeline(message: str, conversation_id: Optional[int] = None) -> D
             if generator is None:
                 logger.error("Generator not available for rewrite - using original response")
             else:
-                response = generator.generate(message, classification, strategy_config, rewrite=True)
+                response = generator.generate(message, generator_context, strategy_config, rewrite=True)
                 # Re-validate after rewrite
                 if critic is not None:
                     critic_result = critic.validate(response, strategy_config)
@@ -176,9 +218,61 @@ async def run_pipeline(message: str, conversation_id: Optional[int] = None) -> D
         result["debug"]["strategy"] = strategy_path
         result["debug"]["critic_score"] = critic_result.get("score")
         result["debug"]["critic_violations"] = critic_result.get("violations")
+        result["debug"].update(document_context)
 
         logger.info(f"========== Pipeline complete (APPROVED) ==========")
         return result
+
+
+def _process_document(
+    document_bytes: Optional[bytes],
+    document_filename: Optional[str],
+    session_id: str,
+) -> dict:
+    """Parse, classify, extract, and embed an uploaded banking document."""
+    context = {
+        "has_document": bool(document_bytes),
+        "document_text": None,
+        "document_type": None,
+        "document_figures": None,
+        "document_doc_id": None,
+        "document_insights": [],
+    }
+    if not document_bytes:
+        return context
+
+    try:
+        try:
+            from backend.document import ingestion
+        except ImportError:
+            from document import ingestion
+
+        filename = (document_filename or "").lower()
+        if filename.endswith((".png", ".jpg", ".jpeg", ".tif", ".tiff")):
+            text = ingestion.ocr_image_document(document_bytes)
+        else:
+            text = ingestion.parse_pdf_document(document_bytes)
+
+        doc_type = ingestion.classify_banking_document(text)
+        figures = ingestion.extract_banking_figures(text, doc_type)
+        context.update(
+            {
+                "document_text": text,
+                "document_type": doc_type,
+                "document_figures": figures,
+            }
+        )
+
+        try:
+            context["document_doc_id"] = ingestion.chunk_and_embed_document(text, session_id=session_id)
+        except Exception as exc:
+            logger.warning("Document chunk/embed failed; continuing with extracted figures: %s", exc)
+            context["document_error"] = str(exc)
+    except Exception as exc:
+        logger.error("Document ingestion failed: %s", exc, exc_info=True)
+        context["document_error"] = str(exc)
+
+    return context
 
 
 # For testing
