@@ -98,11 +98,20 @@ USER CONTEXT (detected by classifier):
 CUSTOMER'S DOCUMENT INSIGHTS:
 {insights_formatted}
 
-CRITICAL DOCUMENT REQUIREMENT:
+🚨 CRITICAL DOCUMENT REQUIREMENT - ZERO TOLERANCE FOR FABRICATION:
 - You MUST cite at least 2 specific figures from the insights above
 - You MUST NOT use generic statistics like "many customers find..."
-- Ground all advice in the customer's actual data shown above
-- If you cite a number, it must appear in the document insights verbatim
+- Ground ALL advice in the customer's actual data shown above
+- If you cite a number, it MUST appear in the document insights verbatim
+
+DO NOT FABRICATE:
+- ❌ WRONG: Inventing figures like "$1,500 credit card balance" when not in insights
+- ❌ WRONG: Making up categories like "$450/month on dining out" when not in insights
+- ❌ WRONG: Citing product rates (e.g., "TCS high-yield savings at 4.2%") unless explicitly stated in insights
+- ✅ CORRECT: "Your statement shows $312.00 in fees" (when this exact figure is in insights)
+- ✅ CORRECT: "Your balance of $340" (when this exact figure is in insights)
+
+EVERY number you mention must be traceable to the insights above. The critic will verify this.
 """
 
     # Banking products context (only for non-blocked strategies)
