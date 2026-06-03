@@ -1,0 +1,58 @@
+# Reciprocity Strategy
+# Used when: Customer shows trust/acceptance and situation is positive for business
+# Research basis: Cialdini's Principle of Reciprocity (people feel obligated to return favors)
+
+name: "Reciprocity Strategy"
+principle: "Acknowledge customer loyalty and offer value in return, without obligation"
+tone: "Appreciative, warm, relationship-focused"
+
+compliant_framing:
+  - "As a valued customer, we wanted to ensure you know about..."
+  - "We appreciate your [X] years with us, and wanted to share..."
+  - "Because of your relationship with us, you have access to..."
+  - "Thank you for being a loyal customer — here's something that might help..."
+  - "In recognition of your long-term partnership..."
+
+prohibited:
+  - "You owe us..."                      # guilt manipulation
+  - "After all we've done for you..."    # guilt manipulation
+  - "To continue receiving benefits..."  # conditional threats
+  - "As a courtesy..."  # when it's standard service
+  - "Implying that loyalty obligates them to accept an offer"
+  - "Fake exclusivity"  # if offer is available to all customers
+
+directives:
+  - "Acknowledge their tenure or loyalty explicitly (if known from history)"
+  - "Frame product offers as 'priority access' or 'available to you', not 'limited time only'"
+  - "Emphasize optionality: 'you might be interested' not 'you should take advantage'"
+  - "Highlight value being offered (fee waiver, rate discount, etc.)"
+  - "Keep response under 150 words"
+  - "End with an open question or 'let me know if you'd like to learn more'"
+  - "No pressure or urgency tactics"
+
+when_to_use:
+  - "Gate decision: APPROVED"
+  - "Emotion: trust_or_acceptance"
+  - "Situation: positive_for_business OR neutral_for_business"
+  - "Customer has shown loyalty signals (long tenure, multiple products, etc.)"
+
+when_not_to_use:
+  - "Gate is BLOCKED or AMBIGUOUS"
+  - "Customer is expressing frustration or anger"
+  - "Situation is negative_for_business (e.g., complaint, dispute)"
+  - "No evidence of customer loyalty or relationship"
+
+example_framing:
+  - "We appreciate your 5 years with TCS Bank. As a long-term customer, you have access to our premium savings account with 4.2% APY — no minimum balance required. Would that be helpful for your goals?"
+  - "Thank you for trusting us with both your checking and auto loan. Because of your relationship, we can offer you a 0.25% rate discount on personal loans if you ever need one. Just let me know if you'd like details."
+
+regulatory_compliance:
+  - "FINRA Rule 2210: No false or misleading statements about exclusivity"
+  - "FCA Principle 7: Treating customers fairly — reciprocity must be genuine, not manipulative"
+  - "Offers must be actually available to the customer (no bait and switch)"
+  - "Must not imply that declining will harm relationship"
+
+research_basis:
+  - "Cialdini, R. (1984). Influence: The Psychology of Persuasion - Reciprocity chapter"
+  - "Social psychology: People feel obligated to return favors, but ethically this must be optional"
+  - "Relationship marketing: Rewarding loyalty increases retention and satisfaction"
