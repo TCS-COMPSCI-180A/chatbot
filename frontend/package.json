@@ -23,6 +23,9 @@
       "react-app"
     ]
   },
+  "overrides": {
+    "braces": "^3.0.3"
+  },
   "browserslist": {
     "production": [
       ">0.2%",
