@@ -1,68 +1,229 @@
-import React, { useState, useRef } from 'react';
-import '@chatscope/chat-ui-kit-styles/dist/default/styles.min.css';
-import {
-  MainContainer,
-  ChatContainer,
-  MessageList,
-  Message,
-  MessageInput,
-  TypingIndicator
-} from '@chatscope/chat-ui-kit-react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import './App.css';
+
+const STORAGE_KEY = 'tcs_chatbot_v1';
 
 const TCSLogo = () => (
   <img
     src="https://www.tcs.com/content/dam/global-tcs/en/images/home/tcs-logo-1.svg"
-    alt="TCS Logo"
-    style={{ height: '36px', width: 'auto' }}
+    alt="TCS"
+    className="tcs-logo"
   />
 );
 
+const IconSidebar = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M9 3v18" />
+  </svg>
+);
+
+const IconPlus = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
+
+const IconSend = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+  </svg>
+);
+
+const IconPaperclip = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+  </svg>
+);
+
+const IconTrash = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6L18 20a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+    <path d="M10 11v6M14 11v6" />
+  </svg>
+);
+
+function loadConversations() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function groupConversations(conversations) {
+  const groups = { Today: [], Yesterday: [], 'Previous 7 Days': [], Older: [] };
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today - 86400000);
+  const weekAgo = new Date(today - 6 * 86400000);
+
+  conversations.forEach(conv => {
+    const d = new Date(conv.createdAt);
+    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    if (day >= today) groups.Today.push(conv);
+    else if (day >= yesterday) groups.Yesterday.push(conv);
+    else if (day >= weekAgo) groups['Previous 7 Days'].push(conv);
+    else groups.Older.push(conv);
+  });
+
+  return groups;
+}
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+const SUGGESTIONS = [
+  'What investment options are best for my retirement?',
+  'Help me understand my risk tolerance',
+  'Explain current market conditions to me',
+  'Review my portfolio allocation strategy',
+];
+
 function App() {
-  const [messages, setMessages] = useState([
-    {
-      message: "Hello! I'm here to help with your financial questions. How can I assist you today?",
-      sender: "assistant",
-      direction: "incoming"
-    }
-  ]);
+  const [conversations, setConversations] = useState(loadConversations);
+  const [activeId, setActiveId] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
-  const [conversationId, setConversationId] = useState(null);
-  const [isDragOver, setIsDragOver] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [inputValue, setInputValue] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const messagesEndRef = useRef(null);
+  const textareaRef = useRef(null);
   const dragCounter = useRef(0);
 
   const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-  const handleSend = async (message) => {
-    const newMessage = { message, sender: "user", direction: "outgoing" };
-    setMessages(prev => [...prev, newMessage]);
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
+  }, [conversations]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isTyping]);
+
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 200) + 'px';
+  }, [inputValue]);
+
+  const startNewChat = () => {
+    setActiveId(null);
+    setMessages([]);
+    setUploadedFiles([]);
+    setInputValue('');
+  };
+
+  const selectConversation = (id) => {
+    const conv = conversations.find(c => c.id === id);
+    setActiveId(id);
+    setMessages(conv?.messages || []);
+    setUploadedFiles([]);
+    setInputValue('');
+  };
+
+  const deleteConversation = (e, id) => {
+    e.stopPropagation();
+    setConversations(prev => prev.filter(c => c.id !== id));
+    if (activeId === id) {
+      setActiveId(null);
+      setMessages([]);
+    }
+  };
+
+  const handleSend = async () => {
+    const message = inputValue.trim();
+    if (!message && uploadedFiles.length === 0) return;
+
+    setInputValue('');
+
+    const userMsg = {
+      message: message || `Uploaded: ${uploadedFiles.map(f => f.name).join(', ')}`,
+      sender: 'user',
+      direction: 'outgoing',
+      timestamp: new Date().toISOString(),
+    };
+
+    const isNewConv = activeId === null;
+    const currentId = isNewConv ? Date.now() : activeId;
+    const updatedMessages = [...messages, userMsg];
+
+    setMessages(updatedMessages);
     setIsTyping(true);
 
-    try {
-      const response = await axios.post(`${apiUrl}/api/v1/chat`, {
-        message,
-        conversation_id: conversationId
-      });
-
-      if (!conversationId) setConversationId(response.data.conversation_id);
-
-      const assistantMessage = {
-        message: response.data.assistant_message.content,
-        sender: "assistant",
-        direction: "incoming"
+    if (isNewConv) {
+      const newConv = {
+        id: currentId,
+        title: (message || 'Document upload').substring(0, 60),
+        messages: updatedMessages,
+        createdAt: new Date().toISOString(),
       };
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error("Error sending message:", error);
-      setMessages(prev => [...prev, {
-        message: "Sorry, there was an error processing your request.",
-        sender: "system",
-        direction: "incoming"
-      }]);
+      setConversations(prev => [newConv, ...prev]);
+      setActiveId(currentId);
+    } else {
+      setConversations(prev =>
+        prev.map(c => c.id === currentId ? { ...c, messages: updatedMessages } : c)
+      );
+    }
+
+    try {
+      let response;
+      if (uploadedFiles.length > 0) {
+        const formData = new FormData();
+        formData.append('message', message);
+        formData.append('conversation_id', currentId);
+        uploadedFiles.forEach(f => formData.append('document', f));
+        response = await axios.post(`${apiUrl}/api/v1/chat`, formData);
+        setUploadedFiles([]);
+      } else {
+        response = await axios.post(`${apiUrl}/api/v1/chat`, {
+          message,
+          conversation_id: currentId,
+        });
+      }
+
+      const assistantMsg = {
+        message: response.data.assistant_message.content,
+        sender: 'assistant',
+        direction: 'incoming',
+        timestamp: new Date().toISOString(),
+      };
+      const finalMessages = [...updatedMessages, assistantMsg];
+      setMessages(finalMessages);
+      setConversations(prev =>
+        prev.map(c => c.id === currentId ? { ...c, messages: finalMessages } : c)
+      );
+    } catch {
+      const errMsg = {
+        message: 'Sorry, there was an error processing your request.',
+        sender: 'system',
+        direction: 'incoming',
+        timestamp: new Date().toISOString(),
+      };
+      const finalMessages = [...updatedMessages, errMsg];
+      setMessages(finalMessages);
+      setConversations(prev =>
+        prev.map(c => c.id === currentId ? { ...c, messages: finalMessages } : c)
+      );
     } finally {
       setIsTyping(false);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
     }
   };
 
@@ -71,199 +232,250 @@ function App() {
     dragCounter.current += 1;
     if (dragCounter.current === 1) setIsDragOver(true);
   };
-
   const handleDragLeave = (e) => {
     e.preventDefault();
     dragCounter.current -= 1;
     if (dragCounter.current === 0) setIsDragOver(false);
   };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
-
+  const handleDragOver = (e) => e.preventDefault();
   const handleDrop = (e) => {
     e.preventDefault();
     dragCounter.current = 0;
     setIsDragOver(false);
     const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      setUploadedFiles(prev => [...prev, ...files]);
-      const names = files.map(f => f.name).join(', ');
-      setMessages(prev => [...prev, {
-        message: `Document${files.length > 1 ? 's' : ''} uploaded: ${names}`,
-        sender: "system",
-        direction: "incoming"
-      }]);
-    }
+    if (files.length > 0) setUploadedFiles(prev => [...prev, ...files]);
   };
 
-  return (
-    <div className="page">
+  const grouped = groupConversations(conversations);
 
-      {/* ── Nav ── */}
-      <header className="navbar">
-        <div className="navbar-inner">
-          <div className="brand">
-            <TCSLogo />
-          </div>
-          <span className="brand-sub">Financial Services · Ethical AI Advisor</span>
-        </div>
-      </header>
-
-      {/* ── Hero ── */}
-      <section className="hero">
-        <div className="hero-inner">
-          <h1 className="hero-title">Ethical AI Financial Assistant</h1>
-          <p className="hero-desc">
-            Context-aware, empathetically guided financial conversations —
-            powered by responsible AI that knows when to advise and when to simply listen.
-          </p>
-          <div className="hero-badges">
-            <span className="badge">FCA Consumer Duty Compliant</span>
-            <span className="badge">Zero Coercive Language</span>
-            <span className="badge">Emotion-Aware</span>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Chat ── */}
-      <section className="chat-section">
-        <div
-          className={`chat-wrapper${isDragOver ? ' drag-over' : ''}`}
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
+  const inputBox = (
+    <div className="input-box">
+      <textarea
+        ref={textareaRef}
+        className="chat-textarea"
+        placeholder="Ask a banking question..."
+        value={inputValue}
+        onChange={e => setInputValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        rows={1}
+      />
+      <div className="input-actions">
+        <label className="icon-btn" title="Attach file">
+          <IconPaperclip />
+          <input
+            type="file"
+            hidden
+            multiple
+            onChange={e => setUploadedFiles(prev => [...prev, ...Array.from(e.target.files)])}
+          />
+        </label>
+        <button
+          className={`send-btn${inputValue.trim() || uploadedFiles.length > 0 ? ' send-btn-active' : ''}`}
+          onClick={handleSend}
+          disabled={!inputValue.trim() && uploadedFiles.length === 0}
+          title="Send"
         >
-          <div className="chat-header-bar">
-            <span className="chat-status-dot" />
-            <span className="chat-header-label">Financial Advisor · Online</span>
-          </div>
+          <IconSend />
+        </button>
+      </div>
+    </div>
+  );
 
-          {isDragOver && (
-            <div className="drag-overlay">
-              <svg width="48" height="48" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M26 6L26 34M26 6L18 14M26 6L34 14" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M8 38V42C8 43.1 8.9 44 10 44H42C43.1 44 44 43.1 44 42V38" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-              <p className="drag-title">Upload Documents</p>
-              <p className="drag-sub">Drop files here to attach them to your conversation</p>
-            </div>
+  const fileChips = uploadedFiles.length > 0 && (
+    <div className="file-chips">
+      {uploadedFiles.map((f, i) => (
+        <span key={i} className="file-chip">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+          </svg>
+          {f.name}
+          <button
+            className="chip-remove"
+            onClick={() => setUploadedFiles(prev => prev.filter((_, j) => j !== i))}
+          >×</button>
+        </span>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="app-shell">
+
+      {/* ── Sidebar ── */}
+      <aside className={`sidebar${sidebarOpen ? '' : ' sidebar-closed'}`}>
+        <div className="sidebar-top">
+          <button className="icon-btn" onClick={() => setSidebarOpen(false)} title="Collapse sidebar">
+            <IconSidebar />
+          </button>
+          <button className="icon-btn" onClick={startNewChat} title="New chat">
+            <IconPlus />
+          </button>
+        </div>
+
+        <div className="sidebar-brand">
+          <TCSLogo />
+          <span className="sidebar-brand-sub">Banking Services · Ethical AI</span>
+        </div>
+
+        <nav className="conv-nav">
+          {Object.entries(grouped).map(([group, convs]) =>
+            convs.length > 0 && (
+              <div key={group} className="conv-group">
+                <span className="conv-group-label">{group}</span>
+                {convs.map(conv => (
+                  <button
+                    key={conv.id}
+                    className={`conv-item${activeId === conv.id ? ' conv-item-active' : ''}`}
+                    onClick={() => selectConversation(conv.id)}
+                  >
+                    <span className="conv-title">{conv.title}</span>
+                    <span
+                      className="conv-delete"
+                      onClick={(e) => deleteConversation(e, conv.id)}
+                      title="Delete"
+                    >
+                      <IconTrash />
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )
           )}
+          {conversations.length === 0 && (
+            <p className="conv-empty">No conversations yet.<br />Start chatting below.</p>
+          )}
+        </nav>
 
-          <div className={`chat-body${isDragOver ? ' chat-body-faded' : ''}`}>
-            <MainContainer>
-              <ChatContainer>
-                <MessageList
-                  scrollBehavior="smooth"
-                  typingIndicator={isTyping ? <TypingIndicator content="Advisor is typing..." /> : null}
-                >
-                  {messages.map((msg, i) => (
-                    <Message key={i} model={msg} />
-                  ))}
-                </MessageList>
-                <MessageInput
-                  placeholder="Ask a financial question..."
-                  onSend={handleSend}
-                  attachButton={false}
-                />
-              </ChatContainer>
-            </MainContainer>
+        <div className="sidebar-footer">
+          <span className="sidebar-footer-text">FCA Consumer Duty Compliant</span>
+        </div>
+      </aside>
+
+      {/* ── Main ── */}
+      <main
+        className="main-area"
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
+        {!sidebarOpen && (
+          <div className="topbar">
+            <button className="icon-btn" onClick={() => setSidebarOpen(true)} title="Open sidebar">
+              <IconSidebar />
+            </button>
+            <button className="icon-btn" onClick={startNewChat} title="New chat">
+              <IconPlus />
+            </button>
           </div>
+        )}
 
-          {uploadedFiles.length > 0 && (
-            <div className="file-chips">
-              {uploadedFiles.map((f, i) => (
-                <span key={i} className="file-chip">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                  {f.name}
-                </span>
+        {isDragOver && (
+          <div className="drag-overlay">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <p className="drag-title">Drop to Upload</p>
+            <p className="drag-sub">Attach documents to your conversation</p>
+          </div>
+        )}
+
+        {activeId === null ? (
+
+          /* ── Landing ── */
+          <div className="landing">
+            <div className="landing-logo">
+              <TCSLogo />
+            </div>
+            <h1 className="landing-greeting">{getGreeting()}</h1>
+            <p className="landing-sub">How can I help with your banking questions today?</p>
+
+            <div className="landing-input-wrap">
+              {fileChips}
+              {inputBox}
+              <p className="input-hint">Enter to send · Shift+Enter for new line</p>
+            </div>
+
+            <div className="suggestions">
+              {SUGGESTIONS.map((s, i) => (
+                <button
+                  key={i}
+                  className="suggestion-chip"
+                  onClick={() => {
+                    setInputValue(s);
+                    textareaRef.current?.focus();
+                  }}
+                >
+                  {s}
+                </button>
               ))}
             </div>
-          )}
-        </div>
-      </section>
 
-      {/* ── About ── */}
-      <section className="about-section">
-        <h2 className="section-title">About This Project</h2>
-        <p className="section-subtitle">
-          Bridging the gap between business goals and customer wellbeing through ethical, context-sensitive AI.
-        </p>
-
-        <div className="about-grid">
-          <div className="about-card">
-            <div className="card-icon">&#9888;</div>
-            <h3>The Problem</h3>
-            <p>
-              With the rise of AI, many enterprises deploy LLM-powered chatbots for customer inquiries.
-              Most are generic and insufficiently tuned for high-stakes financial situations — generating
-              shallow, one-size-fits-all responses during crucial decision-making moments.
-            </p>
+            <div className="landing-badges">
+              <span className="badge">FCA Consumer Duty</span>
+              <span className="badge">Zero Coercive Language</span>
+              <span className="badge">Emotion-Aware</span>
+            </div>
           </div>
 
-          <div className="about-card">
-            <div className="card-icon">&#9906;</div>
-            <h3>The Gap</h3>
-            <p>
-              In investment management, wealth planning, and retirement services, customer decisions are
-              inherently value-driven and sensitive. Current systems lack the ability to understand a
-              customer's emotional state and whether persuasion is even ethical in that context.
-            </p>
-          </div>
+        ) : (
 
-          <div className="about-card">
-            <div className="card-icon">&#10022;</div>
-            <h3>Our Approach</h3>
-            <p>
-              TCS' Banking Chatbot assesses each interaction before responding — distinguishing positive, neutral,
-              and negative contexts. In sensitive cases like personal loss or financial hardship, the
-              system explicitly avoids persuasion and prioritizes empathy.
-            </p>
-          </div>
+          /* ── Chat View ── */
+          <div className="chat-view">
+            <div className="messages-scroll">
+              <div className="messages-inner">
+                {messages.map((msg, i) => (
+                  <div key={i} className={`msg-row msg-${msg.sender}`}>
+                    {msg.sender !== 'user' && (
+                      <div className="msg-avatar">
+                        {msg.sender === 'assistant' ? (
+                          <TCSLogo />
+                        ) : (
+                          <span style={{ fontSize: '0.75rem' }}>!</span>
+                        )}
+                      </div>
+                    )}
+                    <div className={`msg-bubble msg-bubble-${msg.sender}`}>
+                      {msg.message.split('\n').map((line, j, arr) => (
+                        <React.Fragment key={j}>
+                          {line}
+                          {j < arr.length - 1 && <br />}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+                ))}
 
-          <div className="about-card">
-            <div className="card-icon">&#127970;</div>
-            <h3>Focus &amp; Scope</h3>
-            <p>
-              Initially focused on TCS financial domains — investment, wealth management, and retirement —
-              the system is designed to be extensible to broader general-purpose applications while
-              maintaining its ethical foundation across all contexts.
-            </p>
-          </div>
-        </div>
-      </section>
+                {isTyping && (
+                  <div className="msg-row msg-assistant">
+                    <div className="msg-avatar">
+                      <TCSLogo />
+                    </div>
+                    <div className="msg-bubble msg-bubble-typing">
+                      <span className="typing-dot" />
+                      <span className="typing-dot" />
+                      <span className="typing-dot" />
+                    </div>
+                  </div>
+                )}
 
-      {/* ── Pipeline ── */}
-      <section className="pipeline-section">
-        <h2 className="section-title">How It Works</h2>
-        <div className="pipeline">
-          {[
-            { step: "01", label: "Ethics Gate", desc: "Screens for vulnerability signals — bereavement, hardship, high risk" },
-            { step: "02", label: "Classifier", desc: "Detects emotion, intent, and business situation using zero-shot AI" },
-            { step: "03", label: "Strategy Selector", desc: "Picks the right approach: informational, authority, social proof, or empathy" },
-            { step: "04", label: "LLM Generator", desc: "Generates a compliant response via Gemini 2.5 Flash" },
-            { step: "05", label: "Critic", desc: "Scores the response for ethical compliance — rewrites once if needed" },
-          ].map(({ step, label, desc }) => (
-            <div className="pipeline-step" key={step}>
-              <div className="step-number">{step}</div>
-              <div className="step-content">
-                <strong>{label}</strong>
-                <span>{desc}</span>
+                <div ref={messagesEndRef} />
               </div>
             </div>
-          ))}
-        </div>
-      </section>
 
-      {/* ── Footer ── */}
-      <footer className="footer">
-        <div className="footer-logo"><TCSLogo /></div>
-        <p>Built for Tata Consultancy Services · Ethical AI Research Project</p>
-        <p className="footer-sub">Grounded in FCA Consumer Duty (2023) · Cialdini's Principles of Influence · Motivational Interviewing</p>
-      </footer>
+            <div className="chat-input-bar">
+              <div className="chat-input-inner">
+                {fileChips}
+                {inputBox}
+              </div>
+            </div>
+          </div>
 
+        )}
+      </main>
     </div>
   );
 }
