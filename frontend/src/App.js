@@ -20,7 +20,9 @@ function App() {
     }
   ]);
   const [isTyping, setIsTyping] = useState(false);
-  const [conversationId, setConversationId] = useState(null);
+  const [conversationId, setConversationId] = useState(
+    () => localStorage.getItem('conversationId') ? parseInt(localStorage.getItem('conversationId'), 10) : null
+  );
 
   const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
@@ -40,7 +42,9 @@ function App() {
       });
 
       if (!conversationId) {
-        setConversationId(response.data.conversation_id);
+        const newId = response.data.conversation_id;
+        setConversationId(newId);
+        localStorage.setItem('conversationId', newId);
       }
 
       const assistantMessage = {
