@@ -21,13 +21,13 @@ def route_after_gate(state: BankingPipelineState) -> str:
     Called after ethics_gate node. Returns the name of the next node.
 
     BLOCKED  → "db_logger"  (compassionate canned response already set in state)
-    APPROVED → "generator"
-    AMBIGUOUS → "generator" (ambiguous strategy will be selected inside generator)
+    APPROVED → "document_analysis" → generator
+    AMBIGUOUS → "document_analysis" → generator (ambiguous strategy will be selected inside generator)
     """
     gate_decision = state.get("gate_decision") or "APPROVED"
     if gate_decision == "BLOCKED":
         return "db_logger"
-    return "generator"
+    return "document_analysis"
 
 
 def route_after_critic(state: BankingPipelineState) -> str:

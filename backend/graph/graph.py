@@ -48,20 +48,50 @@ def entry_node(state: BankingPipelineState) -> dict:
 # =============================================================================
 def document_ingestion_node(state: BankingPipelineState) -> dict:
     """
-    Stub: parse, classify, extract figures, and embed a document upload.
-    Skipped when has_document is False.
-    Real implementation: Member 3 (backend/document/ingestion.py).
+    Parse, classify, extract figures, and embed a document upload.
+    Uses Member 3's document ingestion implementation.
     """
     if not state.get("has_document"):
         return {}
 
-    logger.info("[document_ingestion] Stub — no document processing yet")
-    return {
-        "document_text": None,
-        "document_type": None,
-        "document_figures": None,
-        "document_doc_id": None,
-    }
+    from document import ingestion
+
+    document_bytes = state.get("document_bytes")
+    session_id = state.get("session_id", "default")
+
+    try:
+        # Parse PDF → text
+        text = ingestion.parse_pdf_document(document_bytes)
+
+        # Classify document type
+        doc_type = ingestion.classify_banking_document(text)
+
+        # Extract key figures (regex patterns)
+        figures = ingestion.extract_banking_figures(text, doc_type)
+
+        # Chunk + Embed → store in pgvector
+        doc_id = ingestion.chunk_and_embed_document(text, session_id)
+
+        logger.info(
+            "[document_ingestion] Processed: type=%s figures=%d doc_id=%s",
+            doc_type, len(figures), doc_id
+        )
+
+        return {
+            "document_text": text,
+            "document_type": doc_type,
+            "document_figures": figures,
+            "document_doc_id": doc_id,
+        }
+
+    except Exception as e:
+        logger.error("[document_ingestion] Failed: %s", e, exc_info=True)
+        return {
+            "document_text": None,
+            "document_type": None,
+            "document_figures": None,
+            "document_doc_id": None,
+        }
 
 
 # =============================================================================
@@ -157,15 +187,23 @@ def ethics_gate_node(state: BankingPipelineState) -> dict:
 # =============================================================================
 def document_analysis_node(state: BankingPipelineState) -> dict:
     """
-    Stub: retrieve relevant chunks and produce grounded document_insights.
+    Retrieve relevant chunks and produce grounded document_insights.
     Only runs when has_document is True and gate == APPROVED.
-    Real implementation: Member 3 (backend/agents/document_analysis_agent.py).
+    Uses Member 3's document analysis implementation.
     """
     if not state.get("has_document"):
         return {}
 
-    logger.info("[document_analysis] Stub — no RAG yet")
-    return {"document_insights": []}
+    from agents import document_analysis_agent
+
+    result = document_analysis_agent.run_document_analysis(state)
+
+    logger.info(
+        "[document_analysis] Generated %d insights",
+        len(result.get("document_insights", []))
+    )
+
+    return result
 
 
 # =============================================================================
@@ -173,12 +211,12 @@ def document_analysis_node(state: BankingPipelineState) -> dict:
 # =============================================================================
 def generator_node(state: BankingPipelineState) -> dict:
     """
-    Select a strategy and generate the response draft.
+    Select a strategy and generate the response draft using Member 4's agents.
 
     Strategy selection priority (Section 5, Node 5 of updated_design.md):
-      1. Gate BLOCKED/AMBIGUOUS → blocked or ambiguous strategy
+      1. Gate BLOCKED/AMBIGUOUS → blocked or ambiguous strategy (or human handoff)
       2. Compliance overrides (fraud, close_account, loan_modification)
-      3. Document-grounded path (stub — has_document + advice intent)
+      3. Document-grounded path (has_document + advice intent)
       4. Emotion-first selection
       5. Default: neutral/informational
 
@@ -186,47 +224,45 @@ def generator_node(state: BankingPipelineState) -> dict:
     exists). rewrite_count is incremented HERE on rewrites so that routing can
     enforce the max-1-rewrite policy without critic needing to mutate the counter.
     """
-    from pipeline import strategy as strat_module, generator as gen_module
+    from agents import strategy_agent, generator_agent
 
-    gate_decision = state.get("gate_decision") or "APPROVED"
     is_rewrite = state.get("response_draft") is not None
     current_rewrite_count = state.get("rewrite_count") or 0
     new_rewrite_count = current_rewrite_count + 1 if is_rewrite else current_rewrite_count
 
-    gate = {
-        "decision": gate_decision,
-        "reason": state.get("gate_reason") or "",
-        "confidence": state.get("gate_confidence") or 1.0,
-    }
+    # Step 1: Strategy selection (Member 4's LLM-based agent)
+    strategy_result = strategy_agent.strategy_node(state)
 
-    classification = None
-    if gate_decision == "APPROVED":
-        classification = {
-            "emotion": state.get("emotion") or "neutral_or_calm",
-            "emotion_confidence": 1.0,
-            "intent": state.get("intent") or "general_banking_inquiry",
-            "intent_confidence": 1.0,
-            "situation": state.get("situation") or "neutral_for_business",
-            "situation_confidence": 1.0,
+    # Check if strategy agent wants human handoff (BLOCKED case)
+    if strategy_result.get("human_handoff"):
+        logger.info("[generator] Strategy agent triggered human handoff")
+        return {
+            "strategy_path": None,
+            "strategy_config": None,
+            "response_draft": "I understand this is a sensitive situation. Let me connect you with a specialist who can provide personalized assistance.",
+            "rewrite_count": new_rewrite_count,
+            "human_handoff": True,
+            "handoff_reason": strategy_result.get("handoff_reason"),
         }
 
-    strategy_path = strat_module.select_strategy(gate, classification)
-    strategy_config = strat_module.load_strategy(strategy_path)
+    # Step 2: Update state with strategy
+    state_with_strategy = {**state, **strategy_result}
 
-    logger.info("[generator] strategy=%s is_rewrite=%s", strategy_path, is_rewrite)
+    # Step 3: Generate response (Member 4's LLM-based generator)
+    generator_result = generator_agent.generator_node(state_with_strategy)
 
-    response = gen_module.generate(
-        message=state["message"],
-        classification=classification,
-        strategy_config=strategy_config,
-        rewrite=is_rewrite,
+    logger.info(
+        "[generator] strategy=%s is_rewrite=%s",
+        strategy_result.get("strategy_path"),
+        is_rewrite
     )
 
     return {
-        "strategy_path":  strategy_path,
-        "strategy_config": strategy_config,
-        "constraints":    strategy_config.get("prohibited", []),
-        "response_draft": response,
+        "strategy_path":  strategy_result.get("strategy_path"),
+        "strategy_config": strategy_result.get("strategy_config"),
+        "strategy_reasoning": strategy_result.get("strategy_reasoning"),
+        "constraints":    strategy_result.get("strategy_config", {}).get("prohibited", []),
+        "response_draft": generator_result.get("response_draft"),
         "rewrite_count":  new_rewrite_count,
     }
 
@@ -236,28 +272,28 @@ def generator_node(state: BankingPipelineState) -> dict:
 # =============================================================================
 def critic_node(state: BankingPipelineState) -> dict:
     """
-    Score the response draft for ethical compliance (0–10).
+    Score the response draft for ethical compliance (0–10) using Member 4's LLM critic.
 
-    Increments rewrite_count on failure so route_after_critic can enforce
-    the max-1-rewrite policy without needing to mutate state in routing.
+    Uses chain-of-thought reasoning to check:
+    - Coercive language, fear tactics
+    - Persuasion in BLOCKED contexts
+    - Document-specific violations (fabricated figures, missing citations)
+    - YAML prohibited phrase violations
     """
-    from pipeline import critic as critic_module
+    from agents import critic_agent
 
-    gate = {"decision": state.get("gate_decision") or "APPROVED"}
-    result = critic_module.score_response(
-        response=state.get("response_draft") or "",
-        strategy=state.get("strategy_config") or {},
-        gate=gate,
-    )
+    result = critic_agent.critic_node(state)
 
     logger.info(
-        "[critic] score=%.1f/10 violations=%d passed=%s",
-        result["score"], len(result.get("violations") or []), result.get("passed"),
+        "[critic] score=%.1f/10 violations=%d",
+        result.get("critic_score", 0.0),
+        len(result.get("critic_violations", [])),
     )
 
     return {
-        "critic_score":      result["score"],
-        "critic_violations": result.get("violations"),
+        "critic_score":      result.get("critic_score", 0.0),
+        "critic_violations": result.get("critic_violations", []),
+        "critic_reasoning":  result.get("critic_reasoning", ""),
     }
 
 
@@ -318,10 +354,10 @@ def create_graph():
     """
     Build and compile the LangGraph StateGraph.
 
-    Flow (follows Banking_Assistant_Diagram):
-      entry → classifier → ethics_gate
+    Flow (with document analysis integrated):
+      entry → document_ingestion → classifier → ethics_gate
         → BLOCKED  : db_logger → END
-        → APPROVED/AMBIGUOUS : generator → critic
+        → APPROVED/AMBIGUOUS : document_analysis → generator → critic
             → score≥7 or rewrite≥1 : db_logger → END
             → score<7 and rewrite=0 : generator (rewrite) → critic → db_logger → END
     """
@@ -343,18 +379,22 @@ def create_graph():
     builder.set_entry_point("entry")
 
     # ── Sequential edges ─────────────────────────────────────────────────────
-    builder.add_edge("entry",      "classifier")
-    builder.add_edge("classifier", "ethics_gate")
+    builder.add_edge("entry",              "document_ingestion")
+    builder.add_edge("document_ingestion", "classifier")
+    builder.add_edge("classifier",         "ethics_gate")
 
     # ── Conditional: after Ethics Gate ───────────────────────────────────────
     builder.add_conditional_edges(
         "ethics_gate",
         route_after_gate,
         {
-            "generator":  "generator",
-            "db_logger":  "db_logger",
+            "document_analysis":  "document_analysis",  # APPROVED path
+            "db_logger":  "db_logger",                   # BLOCKED path
         },
     )
+
+    # ── Document Analysis → Generator (always) ────────────────────────────────
+    builder.add_edge("document_analysis", "generator")
 
     # ── Generator → Critic (always) ──────────────────────────────────────────
     builder.add_edge("generator", "critic")

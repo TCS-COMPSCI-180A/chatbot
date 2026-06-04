@@ -1,0 +1,68 @@
+# Loan Analysis Strategy
+# Used when: Customer uploads loan agreement or mortgage statement + asks for advice
+# Research basis: Rate comparison and refinance analysis require document-specific numbers
+
+name: "Loan Document Analysis"
+principle: "Loan advice must be grounded in the customer's actual loan terms, not generic refinance pitches"
+tone: "Analytical, objective, empowering — help them understand their options"
+
+compliant_framing:
+  - "Based on your loan agreement, your current APR is [X]..."
+  - "Your mortgage statement shows [principal/interest breakdown]..."
+  - "At your current rate of [X]%, you'll pay [Y] in total interest over the life of the loan..."
+  - "Comparing your [X]% APR to current market rates of [Y]%..."
+  - "Your loan terms show [specific detail from document]..."
+
+prohibited:
+  - "You should refinance immediately"   # directive without analysis
+  - "Everyone is refinancing now"        # generic pressure
+  - "Rates will never be this low again" # false urgency
+  - "You're paying too much"             # judgmental without context
+  - Any rate comparison without citing their actual current rate
+  - Refinance recommendations without break-even analysis
+
+directives:
+  - "Cite at least 2 specific loan terms from document_insights (APR, principal, monthly payment, term)"
+  - "If discussing refinance, calculate potential savings AND break-even point"
+  - "Present refinancing as an option to explore, not a recommendation"
+  - "Include trade-offs (closing costs, extended term, etc.)"
+  - "Provide 2-3 numbered next steps if they want to explore options"
+  - "End with a question to understand their goal (lower payment? pay off faster? reduce interest?)"
+  - "Keep response under 200 words"
+
+when_to_use:
+  - "has_document == True"
+  - "document_type in [loan_agreement, mortgage_statement, auto_loan_statement]"
+  - "intent in [seek_banking_advice, request_explanation, general_banking_inquiry, refinance_loan]"
+
+when_not_to_use:
+  - "Gate is BLOCKED or AMBIGUOUS"
+  - "Document present but question is unrelated (e.g., asking about credit cards when they uploaded a mortgage)"
+  - "No document_insights available"
+
+example_response: |
+  "Based on your auto loan agreement, you have $18,500 remaining at 8.9% APR with 42 months left.
+  At this rate, you'll pay approximately $3,200 in interest over the remaining term.
+
+  Current market rates for similar loans are 5.5-7.2% APR. If you refinanced to 6.5%:
+  - Potential interest savings: ~$1,100 over the loan term
+  - Break-even point: ~4 months (if closing costs are $300)
+  - Monthly payment could drop from $412 to $385
+
+  Trade-offs to consider:
+  1. Closing costs (typically $200-500 for auto loans)
+  2. Hard credit inquiry (temporary impact on credit score)
+
+  What matters more to you right now — lower monthly payment or paying less interest overall?"
+
+regulatory_compliance:
+  - "TILA (Truth in Lending Act): Loan terms must be clearly disclosed"
+  - "FCA MCOB 11: Mortgage advice must be suitable and in customer's best interest"
+  - "Must present refinancing as optional, not obligatory"
+  - "Break-even analysis required if discussing refinance"
+  - "No guarantees on rate availability (rates quoted are illustrative)"
+
+research_basis:
+  - "Financial literacy: Many borrowers don't understand principal vs. interest breakdown"
+  - "Decision-making: Break-even analysis helps customers make informed choices"
+  - "Transparency: Showing actual numbers from their document builds trust"

@@ -19,17 +19,21 @@ def retrieve_relevant_chunks(query: str, doc_id: str, top_k: int = 4) -> list[st
     top_k = max(1, min(int(top_k), 12))
 
     try:
-        from openai import OpenAI
+        import os
+        from google import genai
         try:
             from backend.database import SessionLocal
         except ImportError:
             from database import SessionLocal
 
-        client = OpenAI()
-        embedding = client.embeddings.create(
-            model="text-embedding-3-small",
-            input=query,
-        ).data[0].embedding
+        # Embed query using Gemini gemini-embedding-001 (768 dimensions)
+        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+        response = client.models.embed_content(
+            model="models/gemini-embedding-001",
+            contents=query,
+            config={"output_dimensionality": 768}
+        )
+        embedding = response.embeddings[0].values
 
         db = SessionLocal()
         try:
@@ -89,7 +93,7 @@ def get_session_document_id(session_id: str) -> str | None:
 
 
 def _lexical_fallback(query: str, doc_id: str, top_k: int) -> list[str]:
-    """Small fallback for local demos when OpenAI or pgvector is unavailable."""
+    """Small fallback for local demos when embeddings or pgvector are unavailable."""
     try:
         try:
             from backend.database import SessionLocal
