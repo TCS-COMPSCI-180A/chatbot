@@ -18,6 +18,7 @@ class BankingPipelineState(TypedDict):
     message: str
     session_id: str
     document_bytes: Optional[bytes]          # raw upload, None if no document
+    conversation_history: Optional[list]     # previous messages for context
 
     # ── Document Processing ───────────────────────────────────────────────────
     has_document: bool

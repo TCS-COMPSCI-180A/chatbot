@@ -28,16 +28,72 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
+# Helper: Retrieve Conversation History
+# =============================================================================
+def _get_conversation_history(session_id: str, limit: int = 5) -> list[dict]:
+    """
+    Retrieve last N messages from the database for context.
+
+    Returns list of {role: str, content: str} dicts in chronological order.
+    """
+    if not session_id or session_id == "default":
+        return []
+
+    try:
+        from backend.database import SessionLocal
+        from backend.models import Conversation, Message
+    except ImportError:
+        from database import SessionLocal
+        from models import Conversation, Message
+
+    db = SessionLocal()
+    try:
+        # Find conversation by session_id (stored in user_id field)
+        conversation = db.query(Conversation).filter(
+            Conversation.user_id == session_id
+        ).first()
+
+        if not conversation:
+            return []
+
+        # Get last N messages in chronological order
+        messages = db.query(Message).filter(
+            Message.conversation_id == conversation.id
+        ).order_by(Message.created_at.desc()).limit(limit).all()
+
+        # Reverse to get chronological order (oldest first)
+        history = [
+            {"role": msg.role.value, "content": msg.content}
+            for msg in reversed(messages)
+        ]
+
+        logger.info(f"[entry] Retrieved {len(history)} messages from conversation history")
+        return history
+
+    except Exception as e:
+        logger.warning(f"[entry] Failed to retrieve conversation history: {e}")
+        return []
+    finally:
+        db.close()
+
+
+# =============================================================================
 # Node: Entry
 # =============================================================================
 def entry_node(state: BankingPipelineState) -> dict:
     """
     Initialize derived state fields from raw inputs.
-    Sets has_document and default counters; passes through everything else.
+    Sets has_document, retrieves conversation history, and initializes counters.
     """
     has_doc = bool(state.get("document_bytes"))
+    session_id = state.get("session_id", "default")
+
+    # Retrieve conversation history for context-aware responses
+    conversation_history = _get_conversation_history(session_id, limit=5)
+
     return {
         "has_document": has_doc,
+        "conversation_history": conversation_history,
         "rewrite_count": 0,
         "debug_trace": {},
     }
@@ -302,15 +358,14 @@ def critic_node(state: BankingPipelineState) -> dict:
 # =============================================================================
 def db_logger_node(state: BankingPipelineState) -> dict:
     """
-    Finalize the response and write the full audit trace.
+    Finalize the response and write the full audit trace to database.
 
     Preference order for final_response:
       1. state["final_response"]  — set by ethics_gate for BLOCKED messages
       2. state["response_draft"]  — set by generator for APPROVED/AMBIGUOUS
       3. Fallback error string
 
-    DB write is a stub: real implementation writes to the classifications table
-    (Member 5 / DB integration week).
+    Saves to classifications table for full auditability.
     """
     final = (
         state.get("final_response")
@@ -340,6 +395,82 @@ def db_logger_node(state: BankingPipelineState) -> dict:
         debug_trace["critic_score"] or 0.0,
         debug_trace["rewrite_count"] or 0,
     )
+
+    # ═══════════════════════════════════════════════════════════════
+    # SAVE TO DATABASE (for audit trail and future analysis)
+    # ═══════════════════════════════════════════════════════════════
+    try:
+        from backend.database import SessionLocal
+        from backend.models import Conversation, Message, Classification, MessageRole, GateDecision
+    except ImportError:
+        from database import SessionLocal
+        from models import Conversation, Message, Classification, MessageRole, GateDecision
+
+    session_id = state.get("session_id", "default")
+    message_text = state.get("message", "")
+
+    db = SessionLocal()
+    try:
+        # Get or create conversation
+        conversation = db.query(Conversation).filter(
+            Conversation.user_id == session_id
+        ).first()
+
+        if not conversation:
+            conversation = Conversation(user_id=session_id)
+            db.add(conversation)
+            db.flush()
+
+        # Save user message
+        user_msg = Message(
+            conversation_id=conversation.id,
+            role=MessageRole.USER,
+            content=message_text
+        )
+        db.add(user_msg)
+        db.flush()
+
+        # Save assistant response
+        assistant_msg = Message(
+            conversation_id=conversation.id,
+            role=MessageRole.ASSISTANT,
+            content=final
+        )
+        db.add(assistant_msg)
+        db.flush()
+
+        # Save classification/audit trail
+        gate_dec = state.get("gate_decision")
+        gate_decision_enum = None
+        if gate_dec:
+            try:
+                gate_decision_enum = GateDecision(gate_dec.lower())
+            except (ValueError, AttributeError):
+                logger.warning(f"Invalid gate_decision: {gate_dec}")
+
+        classification = Classification(
+            conversation_id=conversation.id,
+            message_id=user_msg.id,
+            situation_type=None,  # Can map from state if needed
+            gate_decision=gate_decision_enum,
+            intent=state.get("intent"),
+            emotion=state.get("emotion"),
+            selected_strategy=state.get("strategy_path"),
+            critic_score=state.get("critic_score"),
+            critic_violations=state.get("critic_violations"),
+            document_type=state.get("document_type"),
+            document_doc_id=state.get("document_doc_id"),
+            raw_classification_data=debug_trace
+        )
+        db.add(classification)
+        db.commit()
+
+        logger.info("[db_logger] Saved to database: conv_id=%d msg_id=%d", conversation.id, user_msg.id)
+    except Exception as e:
+        logger.error("[db_logger] Database save failed: %s", e, exc_info=True)
+        db.rollback()
+    finally:
+        db.close()
 
     return {
         "final_response": final,

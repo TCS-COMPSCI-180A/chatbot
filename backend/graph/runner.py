@@ -45,6 +45,7 @@ async def run_pipeline(
         "message":          message,
         "session_id":       session_id or str(conversation_id or "default"),
         "document_bytes":   document_bytes,
+        "conversation_history": [],  # Will be populated by entry_node
 
         # Document (initialised by entry_node / document_ingestion_node)
         "has_document":       False,

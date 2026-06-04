@@ -58,16 +58,18 @@ def build_system_prompt(
     emotion: Optional[str],
     intent: Optional[str],
     situation: Optional[str],
-    document_insights: Optional[List[str]]
+    document_insights: Optional[List[str]],
+    conversation_history: Optional[List[dict]] = None
 ) -> str:
     """
     Build system prompt from strategy YAML + context
 
     Per design doc, the prompt includes:
     1. Role and banking context
-    2. User context (emotion, intent, situation)
-    3. Document insights (if present) with citation requirement
-    4. Strategy directives (tone, framing, prohibitions)
+    2. Conversation history (for multi-turn awareness)
+    3. User context (emotion, intent, situation)
+    4. Document insights (if present) with citation requirement
+    5. Strategy directives (tone, framing, prohibitions)
 
     Args:
         strategy_config: Loaded strategy YAML dict
@@ -75,10 +77,26 @@ def build_system_prompt(
         intent: Detected intent (or None)
         situation: Business situation (or None)
         document_insights: List of grounded observations from uploaded document (or None)
+        conversation_history: Previous messages for context (or None)
 
     Returns:
         Formatted system prompt string
     """
+
+    # Conversation history section
+    history_section = ""
+    if conversation_history and len(conversation_history) > 0:
+        formatted_history = "\n".join([
+            f"  {msg['role'].upper()}: {msg['content']}"
+            for msg in conversation_history[-5:]  # Last 5 messages
+        ])
+        history_section = f"""
+CONVERSATION HISTORY:
+{formatted_history}
+
+IMPORTANT: Use this context to provide coherent, follow-up responses.
+Reference previous topics naturally without repeating information.
+"""
 
     # User context section
     context_section = ""
@@ -129,7 +147,7 @@ TCS BANKING CONTEXT:
     system_prompt = f"""You are a professional banking assistant for TCS (Tata Consultancy Services).
 You help customers with retail banking products: deposit accounts, loans, credit cards, and account operations.
 {banking_products_section}
-
+{history_section}
 ASSIGNED STRATEGY: {strategy_config.get('name', 'Informational')}
 PRINCIPLE: {strategy_config.get('principle', '')}
 REQUIRED TONE: {strategy_config.get('tone', 'Professional, helpful')}
@@ -181,6 +199,7 @@ def generator_node(state: Dict) -> Dict:
     intent = state.get("intent")
     situation = state.get("situation")
     document_insights = state.get("document_insights")
+    conversation_history = state.get("conversation_history", [])
     rewrite_count = state.get("rewrite_count", 0)
 
     if not strategy_config:
@@ -199,6 +218,7 @@ def generator_node(state: Dict) -> Dict:
     logger.info(
         f"Generator: model={model_name}, strategy={strategy_config.get('name')}, "
         f"has_doc_insights={document_insights is not None}, "
+        f"history_msgs={len(conversation_history) if conversation_history else 0}, "
         f"rewrite_count={rewrite_count}, temp={temperature}"
     )
 
@@ -208,7 +228,8 @@ def generator_node(state: Dict) -> Dict:
         emotion=emotion,
         intent=intent,
         situation=situation,
-        document_insights=document_insights
+        document_insights=document_insights,
+        conversation_history=conversation_history
     )
 
     # Prepare user message (add rewrite instruction if applicable)
