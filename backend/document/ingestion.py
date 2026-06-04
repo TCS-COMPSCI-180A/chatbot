@@ -88,12 +88,13 @@ def classify_banking_document(text: str) -> str:
     sample = text[:1000]
 
     try:
-        # reuse the ethics gate's model instance so we don't load DeBERTa twice
-        try:
-            from backend.pipeline.ethics_gate import _get_classifier
-        except ImportError:
-            from pipeline.ethics_gate import _get_classifier
-        clf = _get_classifier()
+        # Load DeBERTa for zero-shot classification
+        from transformers import pipeline
+        clf = pipeline(
+            "zero-shot-classification",
+            model="MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli",
+            device=-1  # CPU
+        )
         result = clf(
             sequences=sample,
             candidate_labels=DOCUMENT_TYPE_LABELS,
@@ -126,9 +127,10 @@ def extract_banking_figures(text: str, doc_type: str) -> dict:
 
 
 def chunk_and_embed_document(text: str, session_id: str) -> str:
-    """Split document into 512-token chunks, embed each with OpenAI, and store in pgvector. Returns doc_id."""
+    """Split document into 512-token chunks, embed each with Gemini gemini-embedding-001 (768 dims), and store in pgvector. Returns doc_id."""
+    import os
     import uuid
-    from openai import OpenAI
+    from google import genai
     try:
         from backend.database import SessionLocal
         from backend.models import DocumentChunk
@@ -144,7 +146,8 @@ def chunk_and_embed_document(text: str, session_id: str) -> str:
         logger.warning("[Ingestion] No chunks produced for doc_id=%s", doc_id)
         return doc_id
 
-    client = OpenAI()
+    # Initialize Gemini client
+    client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
     db = SessionLocal()
 
     try:
@@ -152,11 +155,13 @@ def chunk_and_embed_document(text: str, session_id: str) -> str:
             try:
                 # embed one chunk at a time; if embeddings are unavailable,
                 # still persist text chunks so lexical retrieval can work.
-                response = client.embeddings.create(
-                    model="text-embedding-3-small",
-                    input=chunk,
+                response = client.models.embed_content(
+                    model="models/gemini-embedding-001",
+                    contents=chunk,
+                    config={"output_dimensionality": 768}
                 )
-                vector = response.data[0].embedding
+                # Gemini returns embedding as .values (list of floats)
+                vector = response.embeddings[0].values
             except Exception as exc:
                 logger.warning("[Ingestion] Embedding failed for chunk %s; storing text only: %s", i, exc)
                 vector = None

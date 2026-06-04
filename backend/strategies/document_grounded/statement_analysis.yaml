@@ -1,0 +1,65 @@
+# Statement-Grounded Advice Strategy
+# Used when: Customer uploads bank statement or credit card statement + asks for advice
+# Research basis: Personalized data-driven advice is more trusted and actionable than generic statistics
+
+name: "Statement-Grounded Advice"
+principle: "Advice grounded in the customer's actual data is more trusted and actionable than generic statistics"
+tone: "Analytical, specific, supportive — like a trusted advisor who read your statement"
+
+compliant_framing:
+  - "Based on your statement, [specific figure]..."
+  - "Your statement shows [X], which means..."
+  - "Comparing your current [rate/balance] to available options..."
+  - "Over the past [period] in your account, [observation]..."
+  - "Looking at your transaction history, I noticed..."
+
+prohibited:
+  - "Many customers find that..."       # generic — use their actual data
+  - "Statistics show..."                # generic — cite their document
+  - "Most people..."                    # generic — be specific to them
+  - Any figure not present in document_insights
+  - Recommendations without tying them to a specific problem in the document
+  - Generic banking advice that could apply to anyone
+
+directives:
+  - "Cite at least 2 specific figures from the document_insights"
+  - "Provide 2-3 numbered action items"
+  - "Each action item must reference specific document evidence"
+  - "Include approximate savings or impact where calculable (e.g., 'could save $X per year')"
+  - "End with one open question to confirm the customer's priority"
+  - "Keep response under 200 words"
+  - "Use actual numbers from their statement, not round approximations"
+  - "If comparing rates, cite both their current rate and market rate"
+
+when_to_use:
+  - "has_document == True"
+  - "document_type in [bank_statement, credit_card_statement, savings_statement]"
+  - "intent in [seek_banking_advice, request_explanation, general_banking_inquiry]"
+
+when_not_to_use:
+  - "Gate is BLOCKED or AMBIGUOUS"
+  - "Document present but user is asking something unrelated to the document"
+  - "No document_insights available (document processing failed)"
+
+example_response: |
+  "Based on your statement, you paid $312 in overdraft fees over the past 90 days.
+  That's $1,248 annualized — a significant expense that's avoidable.
+
+  Here are 3 ways to eliminate these fees:
+  1. Set up low-balance alerts at $100 threshold (your average balance is $340)
+  2. Link to savings for overdraft protection (one-time setup, no monthly fee)
+  3. Maintain $500 minimum balance to waive the $12 monthly maintenance fee
+
+  Which of these would you like to explore first?"
+
+regulatory_compliance:
+  - "FINRA Rule 2210: Communications must be fair and balanced"
+  - "FCA COBS 4.5.2: Communications must be clear, fair, not misleading"
+  - "All figures must be verifiable from customer's uploaded document"
+  - "Recommendations must be suitable for customer's actual situation"
+  - "No guarantees about future performance or savings"
+
+research_basis:
+  - "Behavioral economics: Personalized data increases engagement and action"
+  - "Loss aversion: Specific dollar amounts (fees paid) motivate behavior change more than generic advice"
+  - "Transparency builds trust: Showing you read their document establishes credibility"

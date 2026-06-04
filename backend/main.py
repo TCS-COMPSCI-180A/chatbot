@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
 
-from routers import chat
+from routers import chat, conversations
 
 load_dotenv()
 
@@ -29,6 +29,7 @@ app.add_middleware(
 )
 
 app.include_router(chat.router)
+app.include_router(conversations.router)
 
 
 @app.get("/")

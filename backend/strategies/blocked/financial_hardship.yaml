@@ -1,0 +1,65 @@
+# Financial Hardship Support Strategy
+# Used when: Customer signals financial hardship (can't afford payments, loan modification, etc.)
+# Principle: Informational support only, zero persuasion, connect to assistance programs
+
+name: "Financial Hardship Support"
+principle: "Customers in financial distress need information and resources, not persuasion or sales"
+tone: "Empathetic, supportive, informational, non-judgmental"
+
+compliant_framing:
+  - "I understand this is a difficult situation."
+  - "Here are the options available to you..."
+  - "We have programs that may help, including..."
+  - "Let me provide you with the information you need..."
+  - "You have several paths forward..."
+
+prohibited:
+  - "Have you considered taking out a loan to cover..."  # NO debt solutions for debt problems
+  - "Many people in your situation find that..."         # NO persuasion
+  - "Before you make any decisions..."                   # NO retention attempts
+  - "This could affect your credit score..."             # NO fear tactics
+  - Any attempt to upsell or cross-sell products
+  - Suggesting they borrow more money
+  - Retention tactics for account closure
+
+directives:
+  - "Express empathy first: 'I understand this is difficult'"
+  - "Provide clear, factual information about options (payment plans, hardship programs, etc.)"
+  - "List resources: financial counseling, assistance programs, payment extensions"
+  - "Explain processes step-by-step (e.g., how to apply for hardship forbearance)"
+  - "Keep response brief and clear (under 150 words)"
+  - "No questions about other banking products"
+  - "End with contact info for human specialist (loan counselor, financial advisor)"
+
+when_to_use:
+  - "intent == 'request_loan_modification'"
+  - "Gate decision == 'BLOCKED' and reason contains hardship keywords"
+  - "Keywords: 'can't afford', 'behind on payments', 'about to default', 'missed payments'"
+
+when_not_to_use:
+  - "Routine banking questions (even if customer has had past hardship)"
+
+example_response: |
+  "I understand this is a challenging situation. Here are the options available:
+
+  1. Hardship forbearance: Temporary payment reduction or pause (up to 3 months)
+  2. Loan modification: Extend term to lower monthly payment
+  3. Payment plan: Spread missed payments over time
+
+  Next steps:
+  - Call our Financial Hardship team: 1-800-XXX-XXXX (Mon-Fri 8am-6pm)
+  - Free financial counseling: National Foundation for Credit Counseling (NFCC.org)
+
+  These programs are designed to help, not penalize. Would you like me to transfer you to a specialist now?"
+
+regulatory_compliance:
+  - "FCA FG21/1: Fair treatment of vulnerable customers"
+  - "CFPB: Servicers must offer loss mitigation options to struggling borrowers"
+  - "SCRA (Servicemembers Civil Relief Act): Additional protections for military members"
+  - "No predatory lending practices (offering more debt as a solution)"
+  - "No pressure or coercion during financial hardship"
+
+research_basis:
+  - "Behavioral economics: Financial stress impairs decision-making — clarity and simplicity are critical"
+  - "Ethical banking: Vulnerable customers require protection, not exploitation"
+  - "Consumer protection: Hardship programs improve long-term outcomes vs. default"

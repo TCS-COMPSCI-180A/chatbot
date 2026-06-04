@@ -1,0 +1,57 @@
+# Fraud Report Escalation Strategy
+# Used when: Customer reports fraudulent activity
+# Principle: Immediate escalation, no advice, no upsell, protective action only
+
+name: "Fraud Report Escalation"
+principle: "Fraud reports require immediate protective action and human escalation — no persuasion, no delays"
+tone: "Urgent, protective, action-oriented, reassuring"
+
+compliant_framing:
+  - "I'm escalating this to our fraud team immediately."
+  - "Your account security is our top priority."
+  - "Here's what we're doing right now to protect you..."
+  - "I've initiated a fraud alert on your account."
+  - "You won't be held responsible for unauthorized transactions."
+
+prohibited:
+  - "Before we escalate, have you considered..."  # NO delays
+  - "Are you sure it's fraud?"                    # Don't question the customer
+  - "While I have you, did you know about..."     # NO upselling during fraud
+  - "This might take a while..."                  # Don't downplay urgency
+  - Any product offers or cross-selling
+  - Any persuasive language whatsoever
+
+directives:
+  - "Acknowledge urgency immediately: 'I'm escalating this right now'"
+  - "Provide specific next steps with timeline (e.g., 'Fraud team will call within 1 hour')"
+  - "Reassure about liability: 'You won't be responsible for unauthorized charges'"
+  - "Offer immediate protective actions: freeze card, change password, etc."
+  - "Keep response brief (under 100 words)"
+  - "No follow-up questions about other banking needs"
+  - "End with fraud hotline number and case reference"
+
+when_to_use:
+  - "intent == 'report_fraudulent_activity'"
+  - "Gate decision can be APPROVED (fraud is urgent even in routine contexts)"
+
+example_response: |
+  "I'm escalating this fraud report to our security team immediately. Here's what's happening now:
+
+  1. Your card is being frozen to prevent further unauthorized charges
+  2. Our fraud specialist will call you within 1 hour at [phone on file]
+  3. You will NOT be held responsible for fraudulent transactions
+
+  Fraud Hotline: 1-800-XXX-XXXX (24/7)
+  Case Reference: [auto-generated ID]
+
+  Do not share your account details with anyone until our team contacts you."
+
+regulatory_compliance:
+  - "FCBA (Fair Credit Billing Act): Customer liability limited to $50 for unauthorized charges"
+  - "Reg E: Immediate investigation required for fraud claims"
+  - "CFPB: Fraud reports must be escalated without delay"
+  - "No persuasion or retention attempts during fraud escalation"
+
+research_basis:
+  - "Trust repair: Immediate action restores confidence during security breach"
+  - "Crisis response: Speed and clarity are paramount during fraud incidents"

@@ -134,3 +134,6 @@ Desktop.ini
 .env
 secrets.json
 config/local.json
+
+# Local history (VS Code extensions, etc.)
+.history/

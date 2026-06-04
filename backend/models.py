@@ -151,7 +151,7 @@ class DocumentChunk(Base):
     session_id = Column(String(255), nullable=True, index=True)
     chunk_index = Column(Integer, nullable=True)                 # position within the document
     chunk_text = Column(Text, nullable=False)
-    embedding = Column(Vector(1536), nullable=True)              # 1536-dim vector from text-embedding-3-small
+    embedding = Column(Vector(768), nullable=True)               # 768-dim vector from Gemini gemini-embedding-001
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
