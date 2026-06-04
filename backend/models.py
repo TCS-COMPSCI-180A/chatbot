@@ -5,7 +5,7 @@ SQLAlchemy database models
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum, JSON, Float, UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from backend.database import Base
+from database import Base
 from pgvector.sqlalchemy import Vector
 import enum
 import uuid

@@ -118,11 +118,7 @@ def classify_banking_document(text: str) -> str:
 
 def extract_banking_figures(text: str, doc_type: str) -> dict:
     """Pull structured banking figures from parsed document text."""
-    try:
-        from backend.document.extractors import extract_banking_figures as extract
-    except ImportError:
-        from document.extractors import extract_banking_figures as extract
-
+    from document.extractors import extract_banking_figures as extract
     return extract(text, doc_type)
 
 
@@ -131,12 +127,8 @@ def chunk_and_embed_document(text: str, session_id: str) -> str:
     import os
     import uuid
     from google import genai
-    try:
-        from backend.database import SessionLocal
-        from backend.models import DocumentChunk
-    except ImportError:
-        from database import SessionLocal
-        from models import DocumentChunk
+    from database import SessionLocal
+    from models import DocumentChunk
 
     doc_id = str(uuid.uuid4())
     chunks = _chunk_text(text)

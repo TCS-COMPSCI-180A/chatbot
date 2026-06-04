@@ -21,10 +21,7 @@ def retrieve_relevant_chunks(query: str, doc_id: str, top_k: int = 4) -> list[st
     try:
         import os
         from google import genai
-        try:
-            from backend.database import SessionLocal
-        except ImportError:
-            from database import SessionLocal
+        from database import SessionLocal
 
         # Embed query using Gemini gemini-embedding-001 (768 dimensions)
         client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
@@ -68,12 +65,8 @@ def get_session_document_id(session_id: str) -> str | None:
         return None
 
     try:
-        try:
-            from backend.database import SessionLocal
-            from backend.models import DocumentChunk
-        except ImportError:
-            from database import SessionLocal
-            from models import DocumentChunk
+        from database import SessionLocal
+        from models import DocumentChunk
 
         db = SessionLocal()
         try:
@@ -95,12 +88,8 @@ def get_session_document_id(session_id: str) -> str | None:
 def _lexical_fallback(query: str, doc_id: str, top_k: int) -> list[str]:
     """Small fallback for local demos when embeddings or pgvector are unavailable."""
     try:
-        try:
-            from backend.database import SessionLocal
-            from backend.models import DocumentChunk
-        except ImportError:
-            from database import SessionLocal
-            from models import DocumentChunk
+        from database import SessionLocal
+        from models import DocumentChunk
 
         db = SessionLocal()
         try:

@@ -5,7 +5,7 @@ Handles both JSON and multipart/form-data (for document uploads).
 """
 
 from fastapi import APIRouter, Request
-import random
+import uuid
 
 from graph.runner import run_pipeline
 
@@ -31,14 +31,25 @@ async def chat(request: Request):
     if content_type.startswith("multipart/form-data"):
         form = await request.form()
         message = str(form.get("message", ""))
-        conversation_id = form.get("conversation_id") or random.randint(1000, 9999)
+        raw_cid = form.get("conversation_id")
+        try:
+            conversation_id = int(raw_cid) if raw_cid else None
+        except (ValueError, TypeError):
+            conversation_id = None
         upload = form.get("document") or form.get("file")
         if upload is not None and hasattr(upload, "read"):
             document_bytes = await upload.read()
     else:
         body = await request.json()
         message = body.get("message", "")
-        conversation_id = body.get("conversation_id") or random.randint(1000, 9999)
+        raw_cid = body.get("conversation_id")
+        try:
+            conversation_id = int(raw_cid) if raw_cid is not None else None
+        except (ValueError, TypeError):
+            conversation_id = None
+
+    if not conversation_id:
+        conversation_id = abs(hash(uuid.uuid4())) % (10 ** 9)
 
     session_id = str(conversation_id)
 

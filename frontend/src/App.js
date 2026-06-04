@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import ReactMarkdown from 'react-markdown';
 import './App.css';
 
 const STORAGE_KEY = 'tcs_chatbot_v1';
@@ -203,7 +204,8 @@ function App() {
       setConversations(prev =>
         prev.map(c => c.id === currentId ? { ...c, messages: finalMessages } : c)
       );
-    } catch {
+    } catch (error) {
+      console.error('Chat API error:', error);
       const errMsg = {
         message: 'Sorry, there was an error processing your request.',
         sender: 'system',
@@ -439,12 +441,7 @@ function App() {
                       </div>
                     )}
                     <div className={`msg-bubble msg-bubble-${msg.sender}`}>
-                      {msg.message.split('\n').map((line, j, arr) => (
-                        <React.Fragment key={j}>
-                          {line}
-                          {j < arr.length - 1 && <br />}
-                        </React.Fragment>
-                      ))}
+                      <ReactMarkdown>{msg.message}</ReactMarkdown>
                     </div>
                   </div>
                 ))}

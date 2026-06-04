@@ -30,10 +30,7 @@ def run_document_analysis(state: dict) -> dict:
 
     chunks = []
     if doc_id:
-        try:
-            from backend.document.retrieval import retrieve_relevant_chunks
-        except ImportError:
-            from document.retrieval import retrieve_relevant_chunks
+        from document.retrieval import retrieve_relevant_chunks
 
         chunks = retrieve_relevant_chunks(message, doc_id, top_k=4)
 

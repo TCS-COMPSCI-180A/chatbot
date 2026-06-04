@@ -156,10 +156,7 @@ async def run_pipeline(
         if document_context.get("has_document"):
             logger.info("STEP 3b: Running document analysis...")
             try:
-                try:
-                    from backend.agents.document_analysis_agent import run_document_analysis
-                except ImportError:
-                    from agents.document_analysis_agent import run_document_analysis
+                from agents.document_analysis_agent import run_document_analysis
 
                 analysis_state = {
                     "message": message,
@@ -242,10 +239,7 @@ def _process_document(
         return context
 
     try:
-        try:
-            from backend.document import ingestion
-        except ImportError:
-            from document import ingestion
+        from document import ingestion
 
         filename = (document_filename or "").lower()
         if filename.endswith((".png", ".jpg", ".jpeg", ".tif", ".tiff")):

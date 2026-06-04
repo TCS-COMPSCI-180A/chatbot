@@ -3,22 +3,38 @@ FastAPI Backend for Ethical Persuasion Chatbot
 Main application entry point
 """
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
+from sqlalchemy import text
+
+from database import engine, Base
+import models  # registers all ORM classes with Base
 
 from routers import chat, conversations
 
 load_dotenv()
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    with engine.connect() as conn:
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        conn.commit()
+    Base.metadata.create_all(bind=engine)
+    yield
+
+
 app = FastAPI(
     title="Ethical Persuasion Chatbot API",
     description="Backend API for the ethical persuasion chatbot application",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
-origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+origins = [o.rstrip("/") for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")]
 
 app.add_middleware(
     CORSMiddleware,
