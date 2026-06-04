@@ -86,7 +86,8 @@ def create_mock_pdf_bytes():
     3. Or use any bank statement PDF you have available
     """
     # TODO: Update this path to your local PDF file
-    pdf_path = "/Users/Rounak/Downloads/Banking statement.pdf"
+    pdf_path = os.path.join(parent_dir, "mock_bank_statement.pdf")
+
 
     if not os.path.exists(pdf_path):
         raise FileNotFoundError(

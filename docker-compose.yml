@@ -13,6 +13,7 @@ services:
       - "5433:5432"  # Use port 5433 to avoid conflicts with other PostgreSQL instances
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     networks:
       - chatbot-network
     healthcheck:
