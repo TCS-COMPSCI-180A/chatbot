@@ -39,12 +39,8 @@ def _get_conversation_history(session_id: str, limit: int = 5) -> list[dict]:
     if not session_id or session_id == "default":
         return []
 
-    try:
-        from backend.database import SessionLocal
-        from backend.models import Conversation, Message
-    except ImportError:
-        from database import SessionLocal
-        from models import Conversation, Message
+    from database import SessionLocal
+    from models import Conversation, Message
 
     db = SessionLocal()
     try:
@@ -220,7 +216,7 @@ def ethics_gate_node(state: BankingPipelineState) -> dict:
             "final_response": get_blocked_response(gate_result),
         }
 
-    result = ethics_gate.evaluate(message)
+    result = ethics_gate.evaluate(message, chat_history=state.get("conversation_history", []))
     logger.info(
         "[ethics_gate] decision=%s reason=%s confidence=%.2f",
         result["decision"], result["reason"], result["confidence"],
@@ -399,12 +395,8 @@ def db_logger_node(state: BankingPipelineState) -> dict:
     # ═══════════════════════════════════════════════════════════════
     # SAVE TO DATABASE (for audit trail and future analysis)
     # ═══════════════════════════════════════════════════════════════
-    try:
-        from backend.database import SessionLocal
-        from backend.models import Conversation, Message, Classification, MessageRole, GateDecision
-    except ImportError:
-        from database import SessionLocal
-        from models import Conversation, Message, Classification, MessageRole, GateDecision
+    from database import SessionLocal
+    from models import Conversation, Message, Classification, MessageRole, GateDecision
 
     session_id = state.get("session_id", "default")
     message_text = state.get("message", "")
