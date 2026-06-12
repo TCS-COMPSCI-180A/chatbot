@@ -21,7 +21,7 @@ A sophisticated chatbot application built with FastAPI, React, and PostgreSQL wi
 - **PostgreSQL + pgvector**: Vector similarity search for semantic capabilities
 - **Docker Support**: Fully containerized development and deployment
 - **Hot-Reload**: Automatic code reloading during development
-- **AI Integration**: Support for OpenAI and Anthropic models
+- **AI Integration**: Google Gemini (generation + embeddings) with ethics-gated pipeline
 
 ## 🛠 Tech Stack
 
@@ -72,14 +72,14 @@ Copy the example environment file and configure your settings:
 cp .env.example .env
 ```
 
-Edit `.env` and add your API keys and configuration:
+Edit `.env` and add your API key:
 
 ```bash
-# Required: Add your AI API keys
-OPENAI_API_KEY=sk-your-openai-key-here
-ANTHROPIC_API_KEY=sk-ant-your-anthropic-key-here
+# Required: Add your Google AI API key
+# Get one free at: https://aistudio.google.com/apikey
+GOOGLE_API_KEY=your-google-api-key-here
 
-# Optional: Modify other settings as needed
+# Optional: Modify ports and other settings as needed
 ```
 
 ### 3. Start the Application
@@ -92,7 +92,7 @@ The services will be available at:
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:8000
 - **API Documentation**: http://localhost:8000/docs
-- **PostgreSQL**: localhost:5432
+- **PostgreSQL**: localhost:5433
 
 ## 🐳 Docker Commands
 
@@ -263,23 +263,34 @@ docker-compose exec frontend npm test
 
 ```
 chatbot/
-├── backend/                 # FastAPI backend application
+├── backend/                    # FastAPI backend application
+│   ├── pipeline/               # Core AI pipeline (runs in order, never skip steps)
+│   │   ├── ethics_gate.py      # Rules + zero-shot check (runs first — blocks/allows)
+│   │   ├── classifier.py       # Zero-shot: emotion, intent, situation
+│   │   ├── strategy.py         # Emotion-first YAML strategy selection
+│   │   ├── generator.py        # Gemini LLM with structured prompts
+│   │   ├── critic.py           # Score + optional rewrite (one pass max)
+│   │   └── orchestrator.py     # Coordinates the full pipeline
+│   ├── strategies/             # Human-editable YAML strategy files
+│   │   ├── blocked/
+│   │   ├── soft_persuasion/
+│   │   └── neutral/
+│   ├── routers/
+│   │   ├── chat.py             # Main chat endpoint
+│   │   └── conversations.py    # Conversation CRUD
+│   ├── models.py               # SQLAlchemy models
+│   ├── database.py             # DB session management
+│   ├── main.py                 # Application entry point
 │   ├── Dockerfile
-│   ├── requirements.txt
-│   └── main.py             # Application entry point
-├── frontend/               # React frontend application
+│   └── requirements.txt
+├── frontend/                   # React frontend application
 │   ├── Dockerfile
 │   ├── package.json
 │   └── src/
-├── models/                 # AI/ML models and configurations
-├── scripts/                # Utility scripts
-├── tests/                  # Test files
-├── docker/                 # Docker-related files
-│   └── init-db.sql        # Database initialization
-├── docs/                   # Documentation
-├── data/                   # Data files and datasets
-├── docker-compose.yml      # Docker Compose configuration
-├── .env.example           # Environment variables template
+├── docker/
+│   └── init-db.sql             # Database initialization
+├── docker-compose.yml
+├── .env.example                # Environment variables template
 ├── .gitignore
 └── README.md
 ```
@@ -290,17 +301,19 @@ See [.env.example](.env.example) for all available configuration options.
 
 ### Required Variables
 
-- `OPENAI_API_KEY`: Your OpenAI API key
-- `ANTHROPIC_API_KEY`: Your Anthropic API key
-- `SECRET_KEY`: Secret key for session management
+- `GOOGLE_API_KEY`: Your Google AI API key — used for Gemini LLM generation, embeddings, and the critic agent. Get one free at [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+- `SECRET_KEY`: Secret key for session management (change in production)
 
 ### Optional Variables
 
-- `POSTGRES_USER`: Database user (default: postgres)
-- `POSTGRES_PASSWORD`: Database password (default: postgres)
-- `POSTGRES_DB`: Database name (default: chatbot_db)
-- `BACKEND_PORT`: Backend port (default: 8000)
-- `FRONTEND_PORT`: Frontend port (default: 3000)
+- `POSTGRES_USER`: Database user (default: `postgres`)
+- `POSTGRES_PASSWORD`: Database password (default: `postgres`)
+- `POSTGRES_DB`: Database name (default: `chatbot_db`)
+- `POSTGRES_PORT`: Host-side PostgreSQL port (default: `5433`)
+- `DATABASE_URL`: Full connection string (default: `postgresql://postgres:postgres@localhost:5433/chatbot_db`)
+- `BACKEND_PORT`: Backend port (default: `8000`)
+- `FRONTEND_PORT`: Frontend port (default: `3000`)
+- `CORS_ORIGINS`: Allowed CORS origins (default: `http://localhost:3000`)
 
 ## 🔍 Troubleshooting
 
