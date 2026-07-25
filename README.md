@@ -2,6 +2,9 @@
 
 A sophisticated chatbot application built with FastAPI, React, and PostgreSQL with pgvector for semantic search capabilities.
 
+For a demonstration of the system see the [TCS Banking Assistant Demo Video](https://drive.google.com/file/d/1r49VlzncX1MJv8eF7NU8FJJ52sPNgb8V/view?usp=sharing).
+
+
 ## 📋 Table of Contents
 
 - [Features](#features)
