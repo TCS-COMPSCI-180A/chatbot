@@ -1,8 +1,11 @@
+import sys
+import types
 from unittest.mock import patch
 
 from backend.agents.document_analysis_agent import calculate_banking_metrics, run_document_analysis
 from backend.document.extractors import extract_banking_figures
 from backend.document.ingestion import _chunk_text
+from backend.document import retrieval
 
 
 def test_bank_statement_extraction_and_metrics():
@@ -75,3 +78,16 @@ def test_chunk_text_overlaps():
 
     assert chunks[0].split() == ["0", "1", "2", "3", "4", "5", "6", "7"]
     assert chunks[1].split()[:2] == ["6", "7"]
+
+
+def test_session_document_context_falls_back_to_chunk_lookup(monkeypatch):
+    fake_database = types.ModuleType("database")
+    monkeypatch.setitem(sys.modules, "database", fake_database)
+    monkeypatch.setattr(retrieval, "get_session_document_id", lambda session_id: "doc-123")
+
+    context = retrieval.get_session_document_context("session-abc")
+
+    assert context == {
+        "document_doc_id": "doc-123",
+        "document_type": None,
+    }

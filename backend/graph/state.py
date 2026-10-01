@@ -21,12 +21,13 @@ class BankingPipelineState(TypedDict):
     conversation_history: Optional[list]     # previous messages for context
 
     # ── Document Processing ───────────────────────────────────────────────────
-    has_document: bool
+    has_document: bool                         # current upload or recovered session document is available
     document_text: Optional[str]             # full parsed text
     document_type: Optional[str]             # e.g. "bank_statement"
     document_figures: Optional[dict]         # key numbers extracted from doc
     document_doc_id: Optional[str]           # pgvector doc UUID
     document_insights: Optional[list]        # grounded observations for generator
+    document_reused_from_session: Optional[bool]  # True when a follow-up reuses the latest session doc
 
     # ── Classifier Agent ─────────────────────────────────────────────────────
     emotion: Optional[str]                   # Plutchik label

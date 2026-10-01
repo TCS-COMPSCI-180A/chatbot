@@ -85,6 +85,50 @@ def get_session_document_id(session_id: str) -> str | None:
         return None
 
 
+def get_session_document_context(session_id: str) -> dict | None:
+    """Return the latest document context stored for a session."""
+    if not session_id:
+        return None
+
+    try:
+        from database import SessionLocal
+        from models import Classification, Conversation
+
+        db = SessionLocal()
+        try:
+            row = (
+                db.query(
+                    Classification.document_doc_id,
+                    Classification.document_type,
+                )
+                .join(Conversation, Classification.conversation_id == Conversation.id)
+                .filter(Conversation.user_id == str(session_id))
+                .filter(Classification.document_doc_id.isnot(None))
+                .filter(Classification.document_doc_id != "")
+                .order_by(Classification.created_at.desc(), Classification.id.desc())
+                .first()
+            )
+        finally:
+            db.close()
+
+        if row:
+            return {
+                "document_doc_id": row[0],
+                "document_type": row[1],
+            }
+    except Exception as exc:
+        logger.warning("[Retrieval] Could not load session document context: %s", exc)
+
+    doc_id = get_session_document_id(session_id)
+    if doc_id:
+        return {
+            "document_doc_id": doc_id,
+            "document_type": None,
+        }
+
+    return None
+
+
 def _lexical_fallback(query: str, doc_id: str, top_k: int) -> list[str]:
     """Small fallback for local demos when embeddings or pgvector are unavailable."""
     try:

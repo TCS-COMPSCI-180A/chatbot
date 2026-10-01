@@ -54,6 +54,7 @@ async def run_pipeline(
         "document_figures":   None,
         "document_doc_id":    None,
         "document_insights":  None,
+        "document_reused_from_session": False,
 
         # Classifier
         "emotion":                 None,

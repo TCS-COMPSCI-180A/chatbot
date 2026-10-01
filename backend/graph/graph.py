@@ -79,7 +79,7 @@ def _get_conversation_history(session_id: str, limit: int = 5) -> list[dict]:
 def entry_node(state: BankingPipelineState) -> dict:
     """
     Initialize derived state fields from raw inputs.
-    Sets has_document, retrieves conversation history, and initializes counters.
+    Sets document availability, retrieves conversation history, and initializes counters.
     """
     has_doc = bool(state.get("document_bytes"))
     session_id = state.get("session_id", "default")
@@ -87,12 +87,32 @@ def entry_node(state: BankingPipelineState) -> dict:
     # Retrieve conversation history for context-aware responses
     conversation_history = _get_conversation_history(session_id, limit=5)
 
-    return {
+    updates = {
         "has_document": has_doc,
         "conversation_history": conversation_history,
         "rewrite_count": 0,
         "debug_trace": {},
+        "document_reused_from_session": False,
     }
+
+    if not has_doc:
+        try:
+            from document.retrieval import get_session_document_context
+
+            context = get_session_document_context(session_id)
+        except Exception as exc:
+            logger.warning("[entry] Failed to recover session document context: %s", exc)
+            context = None
+
+        if context:
+            updates.update({
+                "has_document": True,
+                "document_doc_id": context.get("document_doc_id"),
+                "document_type": context.get("document_type"),
+                "document_reused_from_session": True,
+            })
+
+    return updates
 
 
 # =============================================================================
@@ -103,7 +123,7 @@ def document_ingestion_node(state: BankingPipelineState) -> dict:
     Parse, classify, extract figures, and embed a document upload.
     Uses Member 3's document ingestion implementation.
     """
-    if not state.get("has_document"):
+    if not state.get("document_bytes"):
         return {}
 
     from document import ingestion
@@ -134,6 +154,7 @@ def document_ingestion_node(state: BankingPipelineState) -> dict:
             "document_type": doc_type,
             "document_figures": figures,
             "document_doc_id": doc_id,
+            "document_reused_from_session": False,
         }
 
     except Exception as e:
@@ -240,22 +261,54 @@ def ethics_gate_node(state: BankingPipelineState) -> dict:
 def document_analysis_node(state: BankingPipelineState) -> dict:
     """
     Retrieve relevant chunks and produce grounded document_insights.
-    Only runs when has_document is True and gate == APPROVED.
+    Runs for current uploads or later follow-up turns that can recover the
+    latest document context for the same session.
     Uses Member 3's document analysis implementation.
     """
-    if not state.get("has_document"):
-        return {}
+    reused_from_session = bool(state.get("document_reused_from_session"))
+
+    if state.get("has_document"):
+        doc_id = state.get("document_doc_id")
+        doc_type = state.get("document_type")
+        if not doc_id:
+            return {}
+    else:
+        from document.retrieval import get_session_document_context
+
+        context = get_session_document_context(state.get("session_id", "default"))
+        if not context:
+            return {}
+
+        doc_id = context.get("document_doc_id")
+        doc_type = context.get("document_type")
+        reused_from_session = True
+
+    analysis_state = {
+        **state,
+        "has_document": True,
+        "document_doc_id": doc_id,
+        "document_type": doc_type,
+        "document_reused_from_session": reused_from_session,
+    }
 
     from agents import document_analysis_agent
 
-    result = document_analysis_agent.run_document_analysis(state)
+    result = document_analysis_agent.run_document_analysis(analysis_state)
 
     logger.info(
-        "[document_analysis] Generated %d insights",
-        len(result.get("document_insights", []))
+        "[document_analysis] Generated %d insights doc_id=%s reused=%s",
+        len(result.get("document_insights", [])),
+        doc_id,
+        reused_from_session,
     )
 
-    return result
+    return {
+        **result,
+        "has_document": True,
+        "document_doc_id": doc_id,
+        "document_type": doc_type,
+        "document_reused_from_session": reused_from_session,
+    }
 
 
 # =============================================================================
@@ -382,6 +435,8 @@ def db_logger_node(state: BankingPipelineState) -> dict:
         "rewrite_count":      state.get("rewrite_count"),
         "has_document":       state.get("has_document"),
         "document_type":      state.get("document_type"),
+        "document_doc_id":    state.get("document_doc_id"),
+        "document_reused_from_session": state.get("document_reused_from_session"),
     }
 
     logger.info(
